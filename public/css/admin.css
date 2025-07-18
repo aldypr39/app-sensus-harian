@@ -1,0 +1,195 @@
+/* 12. GAYA HALAMAN ADMIN */
+.admin-page-body {
+    background: #e9ecef;
+    color: #212529;
+}
+.dark-theme .admin-page-body {
+    background: #1d2125;
+    color: #e0e0e0;
+}
+
+.admin-layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Sidebar Navigasi */
+.admin-sidebar {
+    width: 260px;
+    background-color: #343a40;
+    color: #ced4da;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0; /* Mencegah sidebar menyusut */
+}
+.dark-theme .admin-sidebar {
+    background-color: #111315;
+}
+
+.sidebar-header {
+    padding: 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border-bottom: 1px solid #495057;
+}
+.sidebar-header i {
+    font-size: 28px;
+    color: var(--primary-action-bg);
+}
+.sidebar-header h2 {
+    margin: 0;
+    font-size: 22px;
+    color: #ffffff;
+}
+
+.sidebar-nav {
+    list-style: none;
+    padding: 16px 0;
+    margin: 0;
+    flex-grow: 1;
+}
+.sidebar-nav .nav-item a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 24px;
+    color: #ced4da;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    border-left: 4px solid transparent;
+}
+.sidebar-nav .nav-item a:hover {
+    background-color: #495057;
+    color: #ffffff;
+}
+.sidebar-nav .nav-item.active a {
+    background-color: #212529;
+    color: #ffffff;
+    border-left-color: var(--primary-action-bg);
+}
+
+.sidebar-footer {
+    padding: 24px;
+    border-top: 1px solid #495057;
+}
+.sidebar-footer .back-to-app {
+    text-decoration: none;
+    color: #ced4da;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Konten Admin */
+.admin-content {
+    flex-grow: 1;
+    padding: 32px;
+    background-color: var(--body-bg);
+}
+.admin-content .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border-color);
+}
+.admin-content h1 {
+    margin: 0;
+    color: var(--header-title-color);
+}
+.admin-content .table-container {
+    border-radius: 8px; /* Sudut lebih tajam untuk tampilan admin */
+}
+
+/* ===== Style untuk baris kelas di modal Ruangan ===== */
+.kelas-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  background-color: var(--bg-light);
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.kelas-row input[type="text"],
+.kelas-row input[type="number"] {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-muted);
+  border-radius: 6px;
+  background-color: #fff;
+  font-size: 0.95rem;
+  transition: border-color 0.2s;
+}
+.kelas-row input:focus {
+  border-color: var(--primary);
+  outline: none;
+}
+
+/* Tombol hapus kelas (“−”) */
+.kelas-row .btn-hapus-kelas {
+  background-color: var(--danger);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.kelas-row .btn-hapus-kelas:hover {
+  background-color: darken(var(--danger), 10%);
+}
+
+/* Tombol “Tambah Kelas” */
+#btn-tambah-kelas {
+  margin-bottom: 1rem;
+}
+
+/* ===== Style untuk tombol Hapus Ruangan di tabel ===== */
+.admin-content table tbody .btn-delete {
+  background-color: transparent;
+  color: var(--danger);
+  border: 2px solid var(--danger);
+  border-radius: 4px;
+  padding: 4px 8px;
+  transition: background-color 0.2s, color 0.2s;
+}
+.admin-content table tbody .btn-delete:hover {
+  background-color: var(--danger);
+  color: #fff;
+}
+
+/* ===== Notifikasi (Toast) ===== */
+.toast {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  min-width: 200px;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.95rem;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  opacity: 0;
+  animation: fadeInOut 3s forwards;
+  z-index: 1000;
+}
+.toast.success   { background-color: var(--success); }
+.toast.error     { background-color: var(--danger); }
+
+/* Fade in/out keyframe */
+@keyframes fadeInOut {
+  0%   { opacity: 0; transform: translateY(-10px); }
+  10%  { opacity: 1; transform: translateY(0); }
+  90%  { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-10px); }
+}
