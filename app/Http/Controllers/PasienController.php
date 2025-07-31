@@ -67,7 +67,14 @@ class PasienController extends Controller
         // 3. Simpan ke database
         $pasien = Pasien::create($validatedData);
 
-        // 4. Kembalikan respon sukses beserta data pasien yang baru dibuat
+        // 4. Update status tempat tidur yang dipilih menjadi 'terisi'
+        if ($pasien) {
+            TempatTidur::where('ruangan_id', $pasien->ruangan_id)
+                        ->where('nomor_tt', $pasien->no_tt)
+                        ->update(['status' => 'terisi']);
+        }
+
+        // 5. Kembalikan respon sukses beserta data pasien yang baru dibuat
         return response()->json($pasien, 201); // 201 = Created
     }
 
@@ -91,6 +98,13 @@ class PasienController extends Controller
 
         // 4. Simpan perubahan
         $pasien->save();
+
+        // 4. Update status tempat tidur yang ditinggalkan menjadi 'tersedia'
+        if ($pasien->wasChanged()) {
+            TempatTidur::where('ruangan_id', $pasien->ruangan_id)
+                        ->where('nomor_tt', $pasien->no_tt)
+                        ->update(['status' => 'tersedia']);
+        }
 
         // 5. Kembalikan respon sukses
         return response()->json([
@@ -140,6 +154,21 @@ class PasienController extends Controller
             'no_tt' => 'required|string',
         ]);
 
+        // 2. Cek apakah tempat tidur berubah
+        $tempatTidurBerubah = $validatedData['no_tt'] !== $pasien->no_tt;
+
+        if ($tempatTidurBerubah) {
+            // Jika berubah, kosongkan tempat tidur lama
+            TempatTidur::where('ruangan_id', $pasien->ruangan_id)
+                        ->where('nomor_tt', $pasien->no_tt)
+                        ->update(['status' => 'tersedia']);
+            
+            // Dan isi tempat tidur yang baru
+            TempatTidur::where('ruangan_id', $pasien->ruangan_id)
+                        ->where('nomor_tt', $validatedData['no_tt'])
+                        ->update(['status' => 'terisi']);
+        }
+
         // 2. Update data pasien dengan data yang divalidasi
         $pasien->update($validatedData);
 
@@ -159,6 +188,7 @@ class PasienController extends Controller
         return response()->json(['message' => 'Data pasien berhasil dihapus secara permanen.']);
     }
 
+    
     public function batalkanPulang($id)
     {
         DB::beginTransaction();
@@ -167,10 +197,25 @@ class PasienController extends Controller
             $pasien = Pasien::findOrFail($id);
 
             // 1. Update status tempat tidur menjadi 'terisi'
-            if ($pasien->no_tt) {
-                TempatTidur::where('nomor_tt', $pasien->no_tt)
-                            ->where('ruangan_id', $pasien->ruangan_id)
-                            ->update(['status' => 'terisi']);
+            // 1. KITA TAMBAHKAN INI: Ambil data tempat tidur yang terkait dengan pasien
+            $tempatTidur = TempatTidur::where('ruangan_id', $pasien->ruangan_id)
+                                    ->where('nomor_tt', $pasien->no_tt)
+                                    ->first();
+
+            // 2. KITA TAMBAHKAN BLOK INI: Logika untuk memeriksa jika TT sudah terisi
+            //    Jika tempat tidur ditemukan dan statusnya sudah 'terisi' oleh pasien lain
+            if ($tempatTidur && $tempatTidur->status == 'terisi') {
+                // Hentikan proses dan kirim pesan error
+                DB::rollBack();
+                return response()->json([
+                    'message' => 'Gagal! Tempat tidur ' . $pasien->no_tt . ' sudah ditempati oleh pasien lain.'
+                ], 409); // 409 Conflict
+            }
+
+            // 3. KITA UBAH BLOK INI: Jika tempat tidur tersedia, lanjutkan proses
+            //    Kode lama Anda: if ($pasien->no_tt) { TempatTidur::where(...)->update(...); }
+            if ($tempatTidur) {
+                $tempatTidur->update(['status' => 'terisi']);
             }
 
             // 2. Kosongkan data keluar dan ubah status pasien

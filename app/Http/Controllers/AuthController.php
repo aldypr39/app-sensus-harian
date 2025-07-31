@@ -39,4 +39,19 @@ class AuthController extends Controller
     {
         return 'username';
     }
+
+    public function logout(Request $request)
+    {
+        // 1. Lakukan logout pada user yang sedang aktif
+        Auth::logout();
+
+        // 2. Invalidate sesi untuk mencegah session fixation
+        $request->session()->invalidate();
+
+        // 3. Buat ulang token CSRF
+        $request->session()->regenerateToken();
+
+        // 4. Kirim respon sukses
+        return response()->json(['message' => 'Logout berhasil.']);
+    }
 }

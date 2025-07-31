@@ -10,6 +10,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const currentUser = JSON.parse(userJSON);
     console.log('Selamat datang,', currentUser.name);
+    const userNameSpan = document.getElementById('display-user-name');
+    if (userNameSpan) {
+        userNameSpan.textContent = currentUser.name;
+    }
     
 
 
@@ -195,11 +199,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Event listener untuk tombol "Tambah Pasien Masuk"
     if (btnTambahPasien) {
-        btnTambahPasien.addEventListener('click', () => {
-            formPasien.reset(); // Kosongkan form
+        btnTambahPasien.addEventListener('click', async () => {
+            formPasien.reset();
             formPasien.removeAttribute('data-edit-id');
             modalTambahPasien.querySelector('h2').textContent = 'Form Tambah Pasien Masuk';
+
+            // --- AWAL KODE BARU ---
+            const tglMasukInput = document.getElementById('tgl_masuk');
+            const now = new Date();
+            // Format tanggal ke YYYY-MM-DDTHH:mm untuk atribut 'max'
+            const maxDateTime = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+            tglMasukInput.max = maxDateTime;
+            // --- AKHIR KODE BARU ---
+            
+            // Kosongkan dan nonaktifkan dropdown
+            populateDropdown(selectKelas, [], 'Memuat kelas...');
+            populateDropdown(selectTT, [], 'Pilih kelas terlebih dahulu');
+            selectTT.disabled = true;
+
             openModal(modalTambahPasien);
+
+            // Ambil data kelas dari backend
+            try {
+                const response = await fetch('/api/ruangan/kelas-tersedia');
+                if (!response.ok) throw new Error('Gagal memuat kelas');
+                const kelasList = await response.json();
+                populateDropdown(selectKelas, kelasList, 'Pilih Kelas');
+            } catch (error) {
+                console.error(error);
+                populateDropdown(selectKelas, [], 'Gagal memuat');
+            }
         });
     }
 
@@ -307,6 +336,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 modalKeluarPasien.dataset.pasienId = pasienId;
                 document.getElementById('tgl_keluar').value = new Date().toISOString().slice(0, 16);
                 openModal(modalKeluarPasien);
+
+                const tglKeluarInput = document.getElementById('tgl_keluar');
+                const now = new Date();
+                const maxDateTime = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+                
+                tglKeluarInput.value = maxDateTime; // Mengisi input dengan waktu sekarang
+                tglKeluarInput.max = maxDateTime;  // Menetapkan batas maksimal waktu
             }
 
             // Logika untuk tombol DELETE
@@ -625,5 +661,41 @@ document.addEventListener('DOMContentLoaded', () => {
     searchRiwayatInput.addEventListener('input', applyRiwayatFilters);
     tglAwalFilter.addEventListener('change', applyRiwayatFilters);
     tglAkhirFilter.addEventListener('change', applyRiwayatFilters);
+
+    // --- AWAL KODE LOGOUT ---
+    const logoutButton = document.querySelector('.logout-btn');
+
+    if (logoutButton) {
+        logoutButton.addEventListener('click', async (e) => {
+            e.preventDefault();
+
+            try {
+                const response = await fetch('/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        // Mengambil token CSRF dari meta tag di HTML
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                });
+
+                if (response.ok) {
+                    // Hapus data user dari localStorage
+                    localStorage.removeItem('sensus_harian_current_user');
+                    // Arahkan ke halaman login
+                    window.location.href = '/login';
+                } else {
+                    throw new Error('Gagal melakukan logout.');
+                }
+
+            } catch (error) {
+                console.error('Error saat logout:', error);
+                alert(error.message);
+            }
+        });
+    }
+
+
 });
 

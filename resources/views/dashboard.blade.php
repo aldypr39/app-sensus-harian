@@ -14,7 +14,7 @@
                 <button id="btn-tambah-pasien" class="header-action-btn"><i class="fas fa-plus-circle"></i> Tambah Pasien Masuk</button>
                 <a href="admin_akun.html" class="header-icon-btn" title="Panel Admin"><i class="fas fa-cogs" style="color: #e67e22;"></i></a>
                 <div class="theme-switcher"><i class="fas fa-sun"></i><label class="switch"><input type="checkbox" id="theme-toggle"><span class="slider round"></span></label><i class="fas fa-moon"></i></div>
-                <div class="user-profile"><span>Perawat Ana</span><button class="logout-btn" title="Logout"><i class="fas fa-sign-out-alt"></i></button></div>
+                <div class="user-profile"><span id="display-user-name">Perawat Ana</span><button class="logout-btn" title="Logout"><i class="fas fa-sign-out-alt"></i></button></div>
             </div>
         </header>
 
