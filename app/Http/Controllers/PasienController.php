@@ -193,36 +193,41 @@ class PasienController extends Controller
     public function getDashboardStats()
     {
         $user = Auth::user();
-        $ruangan = $user->ruangan; // Mengambil data ruangan dari relasi User
+        $ruangan = $user->ruangan;
 
-        // Jika user tidak terhubung ke ruangan (misal: admin)
+        // --- Blok untuk Admin ---
         if (!$ruangan) {
+            $pasien_masuk_hari_ini = Pasien::whereDate('tgl_masuk', today())->count();
+            $pasien_keluar_hari_ini = Pasien::whereDate('tgl_keluar', today())->count();
+            $jumlah_pasien_saat_ini = Pasien::whereNull('tgl_keluar')->count();
+            $pasien_sisa_kemarin = ($jumlah_pasien_saat_ini - $pasien_masuk_hari_ini) + $pasien_keluar_hari_ini;
+
             return response()->json([
                 'nama_ruangan' => 'Dashboard Administrator',
-                // Di sini Anda bisa menghitung total data dari semua ruangan
                 'tempat_tidur_tersedia' => TempatTidur::where('status', 'tersedia')->count(),
                 'total_tempat_tidur' => TempatTidur::count(),
-                'pasien_sisa_kemarin' => 0, // Logika ini perlu dibuat nanti
-                'pasien_masuk_hari_ini' => Pasien::whereDate('tgl_masuk', today())->count(),
-                'pasien_keluar_hari_ini' => Pasien::whereDate('tgl_keluar', today())->count(),
-                'jumlah_pasien_saat_ini' => Pasien::whereNull('tgl_keluar')->count(),
+                'pasien_sisa_kemarin' => $pasien_sisa_kemarin,
+                'pasien_masuk_hari_ini' => $pasien_masuk_hari_ini, // <-- Pastikan ini ada
+                'pasien_keluar_hari_ini' => $pasien_keluar_hari_ini,
+                'jumlah_pasien_saat_ini' => $jumlah_pasien_saat_ini,
             ]);
         }
 
-        // Jika user adalah perawat ruangan, filter berdasarkan ruangannya
+        // --- Blok untuk Perawat Ruangan ---
         $ruangan_id = $ruangan->id;
-
-        // Hitung statistik khusus untuk ruangan tersebut
         $total_tempat_tidur = TempatTidur::where('ruangan_id', $ruangan_id)->count();
         $jumlah_pasien_saat_ini = Pasien::where('ruangan_id', $ruangan_id)->whereNull('tgl_keluar')->count();
+        $pasien_masuk_hari_ini = Pasien::where('ruangan_id', $ruangan_id)->whereDate('tgl_masuk', today())->count();
+        $pasien_keluar_hari_ini = Pasien::where('ruangan_id', $ruangan_id)->whereDate('tgl_keluar', today())->count();
+        $pasien_sisa_kemarin = ($jumlah_pasien_saat_ini - $pasien_masuk_hari_ini) + $pasien_keluar_hari_ini;
 
         return response()->json([
-            'nama_ruangan' => $ruangan->nama_ruangan, // Mengirim nama ruangan yang benar
+            'nama_ruangan' => $ruangan->nama_ruangan,
             'tempat_tidur_tersedia' => $total_tempat_tidur - $jumlah_pasien_saat_ini,
             'total_tempat_tidur' => $total_tempat_tidur,
-            'pasien_sisa_kemarin' => 0, // Logika ini perlu dibuat nanti
-            'pasien_masuk_hari_ini' => Pasien::where('ruangan_id', $ruangan_id)->whereDate('tgl_masuk', today())->count(),
-            'pasien_keluar_hari_ini' => Pasien::where('ruangan_id', $ruangan_id)->whereDate('tgl_keluar', today())->count(),
+            'pasien_sisa_kemarin' => $pasien_sisa_kemarin,
+            'pasien_masuk_hari_ini' => $pasien_masuk_hari_ini, // <-- Pastikan ini ada
+            'pasien_keluar_hari_ini' => $pasien_keluar_hari_ini,
             'jumlah_pasien_saat_ini' => $jumlah_pasien_saat_ini,
         ]);
     }

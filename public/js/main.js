@@ -527,5 +527,41 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+
+    // --- AWAL KODE TOGGLE TEMA ---
+
+    const themeToggle = document.getElementById('theme-toggle');
+    const body = document.body;
+    const themeKey = 'theme_preference';
+
+    // Fungsi untuk menerapkan tema
+    const applyTheme = (theme) => {
+        if (theme === 'dark') {
+            // Menggunakan .dark-theme sesuai dengan CSS Anda
+            body.classList.add('dark-theme'); 
+            themeToggle.checked = true;
+        } else {
+            body.classList.remove('dark-theme');
+            themeToggle.checked = false;
+        }
+    };
+
+    // Saat halaman dimuat, cek tema yang tersimpan di localStorage
+    const savedTheme = localStorage.getItem(themeKey);
+    if (savedTheme) {
+        applyTheme(savedTheme);
+    } else {
+        // Tema default jika tidak ada yang tersimpan
+        applyTheme('light'); 
+    }
+
+    // Event listener saat tombol toggle di-klik
+    themeToggle.addEventListener('change', () => {
+        const newTheme = themeToggle.checked ? 'dark' : 'light';
+        applyTheme(newTheme);
+        // Simpan pilihan user agar diingat saat refresh halaman
+        localStorage.setItem(themeKey, newTheme);
+    });
 });
 
