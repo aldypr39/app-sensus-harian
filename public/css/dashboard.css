@@ -914,3 +914,28 @@ tbody tr:last-child td {
     pointer-events: none;
     mix-blend-mode: overlay;
 }
+
+/* File: public/css/dashboard.css */
+
+.btn-batal-pulang {
+    background-color: #fff3e0; /* Latar belakang oranye muda */
+    color: #fb8c00; /* Warna teks oranye tua */
+    border: 1px solid #ffe0b2; /* Garis tepi tipis */
+    padding: 6px 14px;
+    border-radius: 50px; /* Membuat bentuk seperti pil */
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'Poppins', sans-serif;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease-in-out;
+}
+
+.btn-batal-pulang:hover {
+    background-color: #fb8c00; /* Latar belakang menjadi oranye tua */
+    color: #ffffff; /* Warna teks menjadi putih */
+    border-color: #fb8c00;
+    box-shadow: 0 2px 8px rgba(251, 140, 0, 0.4);
+}

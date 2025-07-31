@@ -1,5 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     console.log('MATA-MATA #1: DOMContentLoaded, script main.js mulai berjalan.');
+    let allActivePatients = [];
+    let allDischargedPatients = [];
     // --- AWAL BAGIAN LOGIN CHECK ---
     const userJSON = localStorage.getItem('sensus_harian_current_user');
     if (!userJSON) {
@@ -57,19 +59,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- AKHIR BAGIAN MEMUAT DATA DASHBOARD ---
     async function loadPasienAktifTable() {
         try {
-            const response = await fetch('/pasien/aktif', {
-                credentials: 'same-origin'
-            });
+            const response = await fetch('/pasien/aktif', { credentials: 'same-origin' });
             if (!response.ok) throw new Error('Gagal memuat data pasien');
 
-            const data = await response.json();
-            renderPasienTable(data);
+            allActivePatients = await response.json(); // Simpan data ke variabel
+            displayPasienTable(allActivePatients); // Tampilkan semua data saat pertama kali dimuat
         } catch (error) {
             console.error('Error memuat tabel pasien:', error);
         }
     }
 
-    function renderPasienTable(pasienList) {
+    function displayPasienTable(pasienList) {
         const tbody = document.getElementById('tabel-pasien-aktif');
         if (!tbody) return;
 
@@ -114,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function renderRiwayatTable(riwayatList) {
+    function displayRiwayatTable(riwayatList) {
         const tbody = document.getElementById('tabel-riwayat-pasien');
         if (!tbody) return;
 
@@ -159,8 +159,9 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch('/pasien/riwayat', { credentials: 'same-origin' });
             if (!response.ok) throw new Error('Gagal memuat riwayat pasien');
-            const data = await response.json();
-            renderRiwayatTable(data);
+
+            allDischargedPatients = await response.json(); // Simpan data ke variabel
+            displayRiwayatTable(allDischargedPatients); // Tampilkan semua data saat awal
         } catch (error) {
             console.error('Error memuat riwayat pasien:', error);
         }
@@ -563,5 +564,66 @@ document.addEventListener('DOMContentLoaded', () => {
         // Simpan pilihan user agar diingat saat refresh halaman
         localStorage.setItem(themeKey, newTheme);
     });
+
+    // --- AWAL KODE FILTER ---
+    const searchInput = document.getElementById('search-pasien-aktif');
+    const kelasFilter = document.getElementById('filter-kelas');
+
+    function applyFilters() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const selectedKelas = kelasFilter.value;
+
+        const filteredData = allActivePatients.filter(pasien => {
+            // Filter berdasarkan nama atau no RM
+            const matchesSearch = pasien.nama_pasien.toLowerCase().includes(searchTerm) || 
+                                String(pasien.no_rm).toLowerCase().includes(searchTerm);
+
+            // Filter berdasarkan kelas
+            const matchesKelas = selectedKelas ? pasien.kelas === selectedKelas : true;
+
+            return matchesSearch && matchesKelas;
+        });
+
+        displayPasienTable(filteredData);
+    }
+
+    // Tambahkan event listener untuk input pencarian dan dropdown kelas
+    searchInput.addEventListener('input', applyFilters);
+    kelasFilter.addEventListener('change', applyFilters);
+
+    // --- FILTER RIWAYAT ---
+    const searchRiwayatInput = document.getElementById('search-riwayat-pulang');
+    const tglAwalFilter = document.getElementById('filter-tanggal-awal');
+    const tglAkhirFilter = document.getElementById('filter-tanggal-akhir');
+
+    function applyRiwayatFilters() {
+        const searchTerm = searchRiwayatInput.value.toLowerCase();
+        const tglAwal = tglAwalFilter.value ? new Date(tglAwalFilter.value) : null;
+        const tglAkhir = tglAkhirFilter.value ? new Date(tglAkhirFilter.value) : null;
+
+        // Atur jam ke awal dan akhir hari untuk perbandingan yang akurat
+        if (tglAwal) tglAwal.setHours(0, 0, 0, 0);
+        if (tglAkhir) tglAkhir.setHours(23, 59, 59, 999);
+
+        const filteredData = allDischargedPatients.filter(pasien => {
+            // Filter nama atau no RM
+            const matchesSearch = pasien.nama_pasien.toLowerCase().includes(searchTerm) ||
+                                String(pasien.no_rm).toLowerCase().includes(searchTerm);
+
+            // Filter tanggal keluar
+            const tglKeluar = new Date(pasien.tgl_keluar);
+            const matchesTanggal = (!tglAwal || tglKeluar >= tglAwal) && 
+                                (!tglAkhir || tglKeluar <= tglAkhir);
+
+            return matchesSearch && matchesTanggal;
+        });
+
+        displayRiwayatTable(filteredData);
+    }
+
+    // Tambahkan event listener untuk semua input filter
+    searchRiwayatInput.addEventListener('input', applyRiwayatFilters);
+    tglAwalFilter.addEventListener('change', applyRiwayatFilters);
+    tglAkhirFilter.addEventListener('change', applyRiwayatFilters);
 });
 
