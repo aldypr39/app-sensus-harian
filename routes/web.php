@@ -3,12 +3,15 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PasienController;
+use App\Http\Controllers\RuanganController;
 
 /*
 |--------------------------------------------------------------------------
 | Web Routes
 |--------------------------------------------------------------------------
 */
+// Rute untuk manajemen ruangan
+Route::get('/manajemen/ruangan', [RuanganController::class, 'index'])->name('ruangan.index')->middleware('auth');
 
 // Rute untuk tamu (yang belum login)
 Route::get('/login', function () {
@@ -16,6 +19,7 @@ Route::get('/login', function () {
 })->name('login');
 
 Route::post('/login', [AuthController::class, 'login']);
+
 
 // Rute untuk user yang sudah login
 Route::middleware('auth')->group(function () {

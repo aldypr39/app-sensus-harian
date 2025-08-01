@@ -193,3 +193,8 @@
   90%  { opacity: 1; }
   100% { opacity: 0; transform: translateY(-10px); }
 }
+
+/* ===== Style untuk daftar kelas di modal Ruangan ===== */
+.kelas-item { margin-bottom: 5px; }
+.nama-kelas { font-weight: 500; }
+.kapasitas { color: #6c757d; font-size: 0.9em; }
