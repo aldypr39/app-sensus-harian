@@ -1,135 +1,233 @@
-// js/admin.js
-import { DataManager, dataStore } from './modules/dataManager.js';
-import { UIController }           from './modules/uiController.js';
-import { Utils }                  from './modules/utils.js';
-
 document.addEventListener('DOMContentLoaded', () => {
-  // Pastikan ini halaman Admin Ruangan
-  if (!window.location.pathname.includes('admin_ruangan')) return;
-  DataManager.load();
+    // Pastikan skrip ini hanya berjalan di halaman manajemen ruangan
+    const formRuangan = document.getElementById('form-ruangan');
+    if (!formRuangan) return;
 
-  // Elemen modal & tombol tambah
-  const modalRuangan     = document.getElementById('modal-ruangan');
-  const btnTambahRuangan = document.getElementById('btn-tambah-ruangan');
-  const closeBtn         = modalRuangan.querySelector('.close-btn');
-  let currentEditRuanganId = null;
+    // --- Referensi Elemen & Variabel Global ---
+    const modalRuangan = document.getElementById('modal-ruangan');
+    const btnTambahRuangan = document.getElementById('btn-tambah-ruangan');
+    const btnTambahKelas = document.getElementById('btn-tambah-kelas');
+    const kelasContainer = document.getElementById('kelas-container');
+    const modalTitle = document.getElementById('modal-ruangan-title');
+    const tableBody = document.querySelector('.table-container tbody');
+    const closeBtn = modalRuangan.querySelector('.close-btn');
+    
+    let currentEditId = null; // Untuk membedakan mode Tambah vs Edit
+    let masterGedung = [];
+    let masterKelas = [];
 
-  // Helper buka/tutup
-  function openModal()  { modalRuangan.classList.add('active'); }
-  function closeModal() { modalRuangan.classList.remove('active'); }
+    // --- Fungsi Helper ---
+    const openModal = () => modalRuangan.classList.add('active');
+    const closeModal = () => modalRuangan.classList.remove('active');
 
-  // Inisialisasi event buka modal “Tambah Ruangan”
-  btnTambahRuangan.addEventListener('click', () => {
-    currentEditRuanganId = null;
-    modalRuangan.querySelector('#modal-ruangan-title').textContent = 'Tambah Ruangan Baru';
-    formRuangan.reset();
-    // kosongkan kelas-container, mulai dengan satu row default
-    kelasContainer.innerHTML = '';
-    kelasContainer.appendChild(buatKelasRow());
-    openModal();
-  });
-  closeBtn.addEventListener('click', closeModal);
-  window.addEventListener('click', e => {
-    if (e.target === modalRuangan) closeModal();
-  });
+    function populateDropdown(selectElement, options, valueKey, textKey, selectedValue = null) {
+        selectElement.innerHTML = '';
+        options.forEach(option => {
+            const opt = document.createElement('option');
+            opt.value = option[valueKey];
+            opt.textContent = option[textKey];
+            if (option[valueKey] == selectedValue) {
+                opt.selected = true;
+            }
+            selectElement.appendChild(opt);
+        });
+    }
+    
+    function createKelasRow(kelasId = null, jumlah = '') {
+        const row = document.createElement('div');
+        row.className = 'kelas-row';
 
-  // References untuk form & dynamic kelas
-  const formRuangan      = document.getElementById('form-ruangan');
-  const kelasContainer   = document.getElementById('kelas-container');
-  const btnTambahKelas   = document.getElementById('btn-tambah-kelas');
+        const select = document.createElement('select');
+        select.name = 'kelas_id';
+        populateDropdown(select, masterKelas, 'id', 'nama_kelas', kelasId);
 
-  // 1) Helper: buat satu baris input kelas
-  function buatKelasRow(nama = '', jumlah = '') {
-    const row = document.createElement('div');
-    row.className = 'kelas-row';
-    row.innerHTML = `
-      <input type="text" name="nama_kelas" placeholder="Nama Kelas" required value="${nama}">
-      <input type="number" name="jumlah_tt" placeholder="Jumlah Tempat Tidur" min="1" required value="${jumlah}">
-      <button type="button" class="btn-hapus-kelas">−</button>
-    `;
-    // event hapus baris
-    row.querySelector('.btn-hapus-kelas').addEventListener('click', () => row.remove());
-    return row;
-  }
+        const inputJumlah = document.createElement('input');
+        inputJumlah.type = 'number';
+        inputJumlah.name = 'jumlah_tt';
+        inputJumlah.placeholder = 'Jumlah TT';
+        inputJumlah.min = 1;
+        inputJumlah.required = true;
+        inputJumlah.value = jumlah;
 
-  // 2) Mulai dengan satu row
-  kelasContainer.appendChild(buatKelasRow());
+        const btnHapus = document.createElement('button');
+        btnHapus.type = 'button';
+        btnHapus.className = 'btn-hapus-kelas';
+        btnHapus.textContent = '−';
+        btnHapus.addEventListener('click', () => row.remove());
 
-  // 3) Tambah row baru
-  btnTambahKelas.addEventListener('click', () => {
-    kelasContainer.appendChild(buatKelasRow());
-  });
-
-  // 4) Submit form: kumpulkan nama_ruangan + classes[]
-  formRuangan.addEventListener('submit', e => {
-    e.preventDefault();
-
-    // Nama ruangan
-    const nama_ruangan = formRuangan.querySelector('[name="nama_ruangan"]').value.trim();
-
-    // Array kelas: [{ nama_kelas, jumlah_tt }, ...]
-    const classes = Array.from(kelasContainer.querySelectorAll('.kelas-row')).map(row => ({
-      nama_kelas: row.querySelector('[name="nama_kelas"]').value.trim(),
-      jumlah_tt:  parseInt(row.querySelector('[name="jumlah_tt"]').value, 10)
-    }));
-
-    // Panggil create or update
-    if (currentEditRuanganId) {
-      DataManager.ruangan.update(currentEditRuanganId, { nama_ruangan, classes });
-    } else {
-      DataManager.ruangan.create({ nama_ruangan, classes });
+        row.appendChild(select);
+        row.appendChild(inputJumlah);
+        row.appendChild(btnHapus);
+        return row;
     }
 
-    // Re‐render tabel dan tutup modal
-    UIController.renderRuanganAdmin();
-    closeModal();
-  });
+    // --- Logika Utama ---
 
-  // 5) Table actions: Edit + Delete
-  const tableBody = document.querySelector('.admin-content table tbody');
-  tableBody.addEventListener('click', e => {
-    const btn = e.target.closest('button');
-    if (!btn) return;
-
-    // Edit
-    if (btn.classList.contains('btn-edit')) {
-      const id = parseInt(btn.dataset.id, 10);
-      const ru = dataStore.ruangan.find(r => r.id === id);
-      if (!ru) return;
-
-      currentEditRuanganId = id;
-      modalRuangan.querySelector('#modal-ruangan-title').textContent = 'Edit Ruangan';
-      formRuangan.querySelector('[name="nama_ruangan"]').value = ru.nama;
-
-      // Render ulang kelas-container sesuai ru.classes (jika ada)
-      kelasContainer.innerHTML = '';
-      (ru.classes || []).forEach(c => {
-        kelasContainer.appendChild(buatKelasRow(c.nama_kelas, c.jumlah_tt));
-      });
-      openModal();
+    // Fungsi untuk memuat data master (gedung & kelas)
+    async function loadMasterData() {
+        if (masterGedung.length > 0 && masterKelas.length > 0) return; // Jangan muat ulang jika sudah ada
+        try {
+            const [gedungRes, kelasRes] = await Promise.all([
+                fetch('/api/master/gedungs'),
+                fetch('/api/master/kelas')
+            ]);
+            masterGedung = await gedungRes.json();
+            masterKelas = await kelasRes.json();
+        } catch (error) {
+            console.error("Gagal memuat data master:", error);
+            alert("Gagal memuat data master untuk form.");
+        }
     }
 
-    // Delete
-    if (btn.classList.contains('btn-delete')) {
-      const id = parseInt(btn.dataset.id, 10);
-      if (confirm('Yakin ingin menghapus ruangan ini?')) {
-        DataManager.ruangan.delete(id);
-        UIController.renderRuanganAdmin();
-        Utils.showNotification('Ruangan berhasil dihapus!', 'success');
+    // 1. Event listener untuk tombol "Tambah Ruangan Baru"
+    btnTambahRuangan.addEventListener('click', async () => {
+        currentEditId = null; // Set mode ke "Tambah"
+        modalTitle.textContent = 'Tambah Ruangan Baru';
+        formRuangan.reset();
+        await loadMasterData(); // Muat data master
+
+        populateDropdown(formRuangan.querySelector('#gedung_id'), masterGedung, 'id', 'nama_gedung');
+        kelasContainer.innerHTML = '';
+        kelasContainer.appendChild(createKelasRow());
+        openModal();
+    });
+
+    // 2. Event listener untuk Aksi di Tabel (Edit & Hapus)
+    tableBody.addEventListener('click', async (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        const id = btn.dataset.id;
+
+        // Jika tombol EDIT diklik
+        if (btn.classList.contains('btn-edit')) {
+            currentEditId = id; // Set mode ke "Edit"
+            modalTitle.textContent = 'Edit Ruangan';
+            formRuangan.reset();
+            await loadMasterData();
+
+            // Ambil data ruangan yang akan diedit dari server
+            try {
+                const response = await fetch(`/manajemen/ruangan/${id}/edit`);
+                const ruanganData = await response.json();
+                
+                // Isi form dengan data yang ada
+                populateDropdown(formRuangan.querySelector('#gedung_id'), masterGedung, 'id', 'nama_gedung', ruanganData.gedung_id);
+                formRuangan.querySelector('#lantai').value = ruanganData.lantai;
+                formRuangan.querySelector('#nama_ruangan').value = ruanganData.nama_ruangan;
+                
+                kelasContainer.innerHTML = '';
+                ruanganData.kelas_perawatans.forEach(kp => {
+                    kelasContainer.appendChild(createKelasRow(kp.kelas_id, kp.jumlah_tt));
+                });
+
+                openModal();
+            } catch (error) {
+                console.error('Gagal mengambil data ruangan:', error);
+                alert('Gagal mengambil data ruangan.');
+            }
+        }
+        
+        // Jika tombol HAPUS diklik
+        if (btn.classList.contains('btn-delete')) {
+        // Tampilkan konfirmasi terlebih dahulu
+          if (confirm('Apakah Anda yakin ingin menghapus ruangan ini? Semua data terkait (kelas, tempat tidur, pasien) juga akan terhapus.')) {
+              try {
+                  const response = await fetch(`/manajemen/ruangan/${id}`, {
+                      method: 'DELETE',
+                      headers: {
+                          'Accept': 'application/json',
+                          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                      }
+                  });
+
+                  const result = await response.json();
+                  if (!response.ok) throw new Error(result.message);
+
+                  alert(result.message);
+                  // Hapus baris dari tabel secara langsung tanpa refresh
+                  btn.closest('tr').remove();
+
+              } catch (error) {
+                  console.error('Gagal menghapus ruangan:', error);
+                  alert(error.message);
+              }
+          }
       }
-    }
-  });
+    });
 
-  // 6) Initial render
-  UIController.renderRuanganAdmin();
+    // 3. Event listener untuk "Tambah Kelas" di dalam modal
+    btnTambahKelas.addEventListener('click', () => {
+        if (masterKelas.length > 0) {
+            kelasContainer.appendChild(createKelasRow());
+        } else {
+            alert('Data kelas belum termuat, silakan buka ulang form.');
+        }
+    });
+
+    // 4. Event listener untuk SUBMIT FORM (bisa untuk Tambah & Edit)
+    formRuangan.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const formData = new FormData(formRuangan);
+        const ruanganData = {
+            gedung_id: formData.get('gedung_id'),
+            lantai: formData.get('lantai'),
+            nama_ruangan: formData.get('nama_ruangan'),
+            classes: []
+        };
+        
+        const kelasRows = kelasContainer.querySelectorAll('.kelas-row');
+        kelasRows.forEach(row => {
+            ruanganData.classes.push({
+                kelas_id: row.querySelector('[name="kelas_id"]').value,
+                jumlah_tt: row.querySelector('[name="jumlah_tt"]').value
+            });
+        });
+
+        // Tentukan URL dan method berdasarkan mode (Tambah atau Edit)
+        let url = '/manajemen/ruangan';
+        const method = 'POST'; // Selalu gunakan POST
+
+        if (currentEditId) {
+            url = `/manajemen/ruangan/${currentEditId}`;
+            ruanganData._method = 'PUT'; // Tambahkan _method spoofing untuk edit
+        }
+        
+        try {
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify(ruanganData)
+            });
+            
+            const result = await response.json();
+
+            if (!response.ok) {
+                if (response.status === 422) {
+                    const errorMessages = Object.values(result.errors).map(err => `- ${err[0]}`).join('\n');
+                    alert(`Error Validasi:\n${errorMessages}`);
+                } else {
+                    throw new Error(result.message || 'Gagal menyimpan data.');
+                }
+            } else {
+                alert(result.message);
+                closeModal();
+                window.location.reload();
+            }
+        } catch (error) {
+            console.error("Error saat menyimpan:", error);
+            alert("Terjadi kesalahan. Silakan coba lagi.");
+        }
+    });
+
+    // 5. Tutup modal
+    closeBtn.addEventListener('click', closeModal);
+    window.addEventListener('click', (e) => {
+        if (e.target === modalRuangan) closeModal();
+    });
+
 });
-
-
-function showToast(message, type = 'success') {
-  const t = document.createElement('div');
-  t.className = `toast ${type}`;
-  t.textContent = message;
-  document.body.appendChild(t);
-  // otomatis terhapus setelah animasi
-  t.addEventListener('animationend', () => t.remove());
-}

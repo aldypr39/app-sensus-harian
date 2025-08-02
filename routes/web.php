@@ -53,9 +53,22 @@ Route::middleware('auth')->group(function () {
     // Rute untuk mendapatkan tempat tidur yang tersedia berdasarkan kelas yang dipilih
     Route::get('/api/ruangan/tempat-tidur-tersedia', [PasienController::class, 'getTempatTidurTersedia']);
 
+});
 
-    // Rute untuk manajemen ruangan
-    Route::get('/manajemen/ruangan', [RuanganController::class, 'index'])->name('ruangan.index')->middleware('auth');
+Route::middleware('auth')->group(function () {
+    
+    // Rute API untuk mengambil data master (dropdown)
+    Route::get('/api/master/gedungs', [RuanganController::class, 'getAllGedungs']);
+    Route::get('/api/master/kelas', [RuanganController::class, 'getAllKelas']);
+    
+    // Grup untuk semua halaman manajemen
+    Route::prefix('manajemen')->group(function() {
+        // Rute untuk Manajemen Ruangan
+        Route::get('/ruangan', [RuanganController::class, 'index'])->name('ruangan.index');
+        Route::post('/ruangan', [RuanganController::class, 'store'])->name('ruangan.store');
+        Route::get('/ruangan/{ruangan}/edit', [RuanganController::class, 'edit'])->name('ruangan.edit');
+        Route::put('/ruangan/{ruangan}', [RuanganController::class, 'update'])->name('ruangan.update');
+        Route::delete('/ruangan/{ruangan}', [RuanganController::class, 'destroy'])->name('ruangan.destroy');
+    });
 
-    Route::post('/manajemen/ruangan', [RuanganController::class, 'store'])->name('ruangan.store');
 });

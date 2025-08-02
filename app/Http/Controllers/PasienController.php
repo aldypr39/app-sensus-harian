@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Pasien;
-use App\Models\TempatTidur;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
+use App\Models\Pasien;
+use App\Models\TempatTidur;
+use App\Models\Ruangan;
+use App\Models\Gedung;
+use App\Models\Kelas;             
 use App\Models\KelasPerawatan;
 
 /**
@@ -281,9 +284,11 @@ class PasienController extends Controller
     {
         $ruanganId = Auth::user()->ruangan_id;
 
-        $kelas = KelasPerawatan::where('ruangan_id', $ruanganId)
-                                ->distinct()
-                                ->pluck('nama_kelas');
+        // Ambil ID kelas yang ada di ruangan ini dari tabel kelas_perawatans
+        $kelasIds = KelasPerawatan::where('ruangan_id', $ruanganId)->pluck('kelas_id');
+        
+        // Ambil detail nama kelas dari tabel master 'kelas'
+        $kelas = Kelas::whereIn('id', $kelasIds)->get(['id', 'nama_kelas']);
 
         return response()->json($kelas);
     }
@@ -293,14 +298,13 @@ class PasienController extends Controller
      */
     public function getTempatTidurTersedia(Request $request)
     {
-        // Validasi input kelas
-        $request->validate(['kelas' => 'required|string']);
+        $request->validate(['kelas_id' => 'required|integer']); // Validasi input
 
         $ruanganId = Auth::user()->ruangan_id;
-        $kelas = $request->input('kelas');
+        $kelasId = $request->input('kelas_id');
 
         $tempatTidur = TempatTidur::where('ruangan_id', $ruanganId)
-                                    ->where('kelas', $kelas)
+                                    ->where('kelas_id', $kelasId) // Filter berdasarkan kelas_id
                                     ->where('status', 'tersedia')
                                     ->pluck('nomor_tt');
 

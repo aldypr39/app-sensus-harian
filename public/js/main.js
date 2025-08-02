@@ -496,21 +496,34 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Helper function untuk mengisi dropdown
-    function populateDropdown(selectElement, options, placeholder) {
-        selectElement.innerHTML = `<option value="">${placeholder}</option>`;
-        options.forEach(option => {
-            selectElement.innerHTML += `<option value="${option}">${option}</option>`;
-        });
+    function populateDropdown(selectElement, options, placeholder, valueKey = null, textKey = null) {
+    selectElement.innerHTML = `<option value="">${placeholder}</option>`;
+    if (!Array.isArray(options)) return; // Pastikan options adalah array
+
+    options.forEach(option => {
+        // Jika options adalah array objek, gunakan key. Jika tidak, gunakan option itu sendiri.
+        const value = valueKey ? option[valueKey] : option;
+        const text = textKey ? option[textKey] : option;
+        const optionElement = document.createElement('option');
+        optionElement.value = value;
+        optionElement.textContent = text;
+        selectElement.appendChild(optionElement);
+    });
     }
 
-    // A. Saat Tombol "Tambah Pasien" Diklik
+// A. Saat Tombol "Tambah Pasien" Diklik
     if (btnTambahPasien) {
         btnTambahPasien.addEventListener('click', async () => {
             formPasien.reset();
             formPasien.removeAttribute('data-edit-id');
             modalTambahPasien.querySelector('h2').textContent = 'Form Tambah Pasien Masuk';
             
-            // Kosongkan dan nonaktifkan dropdown
+            // Atur tanggal maksimal
+            const tglMasukInput = document.getElementById('tgl_masuk');
+            const now = new Date();
+            const maxDateTime = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+            tglMasukInput.max = maxDateTime;
+
             populateDropdown(selectKelas, [], 'Memuat kelas...');
             populateDropdown(selectTT, [], 'Pilih kelas terlebih dahulu');
             selectTT.disabled = true;
@@ -522,7 +535,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const response = await fetch('/api/ruangan/kelas-tersedia');
                 if (!response.ok) throw new Error('Gagal memuat kelas');
                 const kelasList = await response.json();
-                populateDropdown(selectKelas, kelasList, 'Pilih Kelas');
+                // Gunakan helper canggih untuk mengisi dropdown kelas
+                populateDropdown(selectKelas, kelasList, 'Pilih Kelas', 'id', 'nama_kelas');
             } catch (error) {
                 console.error(error);
                 populateDropdown(selectKelas, [], 'Gagal memuat');
@@ -533,32 +547,33 @@ document.addEventListener('DOMContentLoaded', () => {
     // B. Saat Kelas di Dropdown Dipilih
     if (selectKelas) {
         selectKelas.addEventListener('change', async () => {
-            const selectedKelas = selectKelas.value;
+            const selectedKelasId = selectKelas.value; // Sekarang kita pakai ID
             
-            // Kosongkan dan nonaktifkan dropdown TT
             populateDropdown(selectTT, [], 'Memuat tempat tidur...');
             selectTT.disabled = true;
 
-            if (!selectedKelas) {
+            if (!selectedKelasId) {
                 populateDropdown(selectTT, [], 'Pilih kelas terlebih dahulu');
                 return;
             }
 
             // Ambil data tempat tidur dari backend
             try {
-                const response = await fetch(`/api/ruangan/tempat-tidur-tersedia?kelas=${selectedKelas}`);
+                // Kirim kelas_id ke server
+                const response = await fetch(`/api/ruangan/tempat-tidur-tersedia?kelas_id=${selectedKelasId}`);
                 if (!response.ok) throw new Error('Gagal memuat tempat tidur');
                 const ttList = await response.json();
                 
                 populateDropdown(selectTT, ttList, 'Pilih Tempat Tidur');
-                selectTT.disabled = false; // Aktifkan kembali dropdown TT
+                selectTT.disabled = false;
                 
                 if(ttList.length === 0) {
                     populateDropdown(selectTT, [], 'Tidak ada TT tersedia');
                     selectTT.disabled = true;
                 }
 
-            } catch (error) {
+            } catch (error)
+            {
                 console.error(error);
                 populateDropdown(selectTT, [], 'Gagal memuat');
             }
