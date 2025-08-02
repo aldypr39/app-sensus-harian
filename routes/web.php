@@ -10,8 +10,6 @@ use App\Http\Controllers\RuanganController;
 | Web Routes
 |--------------------------------------------------------------------------
 */
-// Rute untuk manajemen ruangan
-Route::get('/manajemen/ruangan', [RuanganController::class, 'index'])->name('ruangan.index')->middleware('auth');
 
 // Rute untuk tamu (yang belum login)
 Route::get('/login', function () {
@@ -54,4 +52,10 @@ Route::middleware('auth')->group(function () {
 
     // Rute untuk mendapatkan tempat tidur yang tersedia berdasarkan kelas yang dipilih
     Route::get('/api/ruangan/tempat-tidur-tersedia', [PasienController::class, 'getTempatTidurTersedia']);
+
+
+    // Rute untuk manajemen ruangan
+    Route::get('/manajemen/ruangan', [RuanganController::class, 'index'])->name('ruangan.index')->middleware('auth');
+
+    Route::post('/manajemen/ruangan', [RuanganController::class, 'store'])->name('ruangan.store');
 });

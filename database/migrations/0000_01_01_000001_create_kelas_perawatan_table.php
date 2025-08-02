@@ -13,10 +13,9 @@ return new class extends Migration
     {
         Schema::create('kelas_perawatans', function (Blueprint $table) {
             $table->id();
-            // Foreign key yang terhubung ke tabel ruangan
-            $table->foreignId('ruangan_id')->constrained('ruangans')->onDelete('cascade');
-            $table->string('nama_kelas');   // Kolom untuk nama kelas (misal: "VIP")
-            $table->integer('jumlah_tt');   // Kolom untuk jumlah tempat tidur
+            $table->foreignId('ruangan_id')->constrained('ruangans');
+            $table->foreignId('kelas_id')->constrained('kelas');
+            $table->integer('jumlah_tt');
             $table->timestamps();
         });
     }

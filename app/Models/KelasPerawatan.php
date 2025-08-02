@@ -4,22 +4,32 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class KelasPerawatan extends Model
 {
     use HasFactory;
 
-    // Dengan tidak adanya properti 'protected $table', Laravel akan
-    // secara otomatis menggunakan tabel 'kelas_perawatans' (jamak). Ini yang benar.
-
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
         'ruangan_id',
-        'nama_kelas',
+        'kelas_id',
         'jumlah_tt',
     ];
+
+    /**
+     * Mendefinisikan relasi ke model Ruangan.
+     */
+    public function ruangan(): BelongsTo
+    {
+        return $this->belongsTo(Ruangan::class);
+    }
+
+    /**
+     * Mendefinisikan relasi ke model Kelas.
+     * INI FUNGSI YANG HILANG.
+     */
+    public function kelas(): BelongsTo
+    {
+        return $this->belongsTo(Kelas::class);
+    }
 }

@@ -12,11 +12,11 @@ return new class extends Migration
     public function up(): void
     {
     Schema::create('ruangans', function (Blueprint $table) {
-        $table->id();                   // Membuat kolom ID otomatis
-        $table->string('gedung');       // Membuat kolom untuk nama gedung
-        $table->string('lantai');       // Membuat kolom untuk nama lantai
-        $table->string('nama_ruangan'); // Membuat kolom untuk nama ruangan
-        $table->timestamps();           // Membuat kolom created_at & updated_at
+        $table->id();
+        $table->foreignId('gedung_id')->constrained('gedungs');
+        $table->string('nama_ruangan');
+        $table->string('lantai');
+        $table->timestamps();
     });
     }
 

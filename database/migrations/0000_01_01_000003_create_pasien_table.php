@@ -19,8 +19,8 @@ return new class extends Migration
             $table->dateTime('tgl_masuk');
             $table->enum('asal_pasien', ['igd', 'poli', 'pindahan']);
             $table->foreignId('ruangan_id')->constrained('ruangans')->onDelete('cascade');
-            $table->string('kelas');
-            $table->string('no_tt');
+            $table->foreignId('kelas_id')->constrained('kelas');
+            $table->foreignId('tempat_tidur_id')->constrained('tempat_tidurs');
             $table->enum('status', ['aktif', 'keluar']);
             $table->dateTime('tgl_keluar')->nullable();
             $table->enum('keadaan_keluar', ['pulang', 'aps', 'pindah', 'dirujuk', 'meninggal'])->nullable();

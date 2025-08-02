@@ -12,29 +12,12 @@ class RuanganSeeder extends Seeder
      */
     public function run(): void
     {
-        // Menggunakan Model Ruangan untuk insert data ke tabel yang benar ('ruangans')
-        Ruangan::insert([
-            [
-                'nama_ruangan' => 'Ruang Mata',
-                'gedung' => 'Gedung Tulip',
-                'lantai' => '1a',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'nama_ruangan' => 'Ruang Aster Lantai 3',
-                'gedung' => 'Gedung Aster',
-                'lantai' => '3',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'nama_ruangan' => 'Ruang Wijaya Kusuma 4',
-                'gedung' => 'Gedung Ulin Tower',
-                'lantai' => '4',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-        ]);
+        // Menggunakan ID dari data yang akan dibuat oleh GedungSeeder
+        // Gedung Tulip -> id 1
+        // Gedung Aster -> id 2
+        // Gedung Ulin Tower -> id 3
+        Ruangan::create(['gedung_id' => 1, 'nama_ruangan' => 'Ruang Mawar', 'lantai' => '1A']);
+        Ruangan::create(['gedung_id' => 1, 'nama_ruangan' => 'Ruang Melati', 'lantai' => '1B']);
+        Ruangan::create(['gedung_id' => 2, 'nama_ruangan' => 'Ruang Anggrek', 'lantai' => '3']);
     }
 }

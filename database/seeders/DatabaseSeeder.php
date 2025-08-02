@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -12,12 +11,15 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Hapus semua kode contoh, ganti dengan ini.
-        // Ini akan memanggil seeder kita secara berurutan.
         $this->call([
+            // 1. Jalankan seeder data master dulu
+            GedungSeeder::class,
+            KelasSeeder::class,
+
+            // 2. Baru jalankan seeder yang tergantung pada data master
             RuanganSeeder::class,
             KelasPerawatanSeeder::class,
-            TempatTidurSeeder::class,
+            TempatTidurSeeder::class, 
             UserSeeder::class,
         ]);
     }

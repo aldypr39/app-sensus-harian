@@ -11,13 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('tempat_tidurs', function (Blueprint $table) {
+        Schema::create('gedungs', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('ruangan_id')->constrained('ruangans');
-            $table->foreignId('kelas_id')->constrained('kelas');
-            $table->string('nomor_tt');
-            $table->enum('status', ['tersedia', 'terisi'])->default('tersedia');
+            $table->string('nama_gedung')->unique();
             $table->timestamps();
         });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('gedungs');
     }
 };

@@ -2,8 +2,9 @@
 namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-class TempatTidur extends Model
+class Kelas extends Model
 {
     use HasFactory;
-    protected $fillable = ['ruangan_id', 'kelas_id', 'nomor_tt', 'status'];
+    protected $table = 'kelas'; 
+    protected $fillable = ['nama_kelas'];
 }
