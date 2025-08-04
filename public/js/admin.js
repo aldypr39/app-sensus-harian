@@ -64,8 +64,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Logika Utama ---
 
     // Fungsi untuk memuat data master (gedung & kelas)
-    async function loadMasterData() {
-        if (masterGedung.length > 0 && masterKelas.length > 0) return; // Jangan muat ulang jika sudah ada
+    async function loadMasterData(force = false) {
+        if (masterGedung.length > 0 && masterKelas.length > 0 && !force) return; // Jangan muat ulang jika sudah ada
         try {
             const [gedungRes, kelasRes] = await Promise.all([
                 fetch('/api/master/gedungs'),
@@ -309,6 +309,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!response.ok) throw new Error('Gagal menyimpan gedung.');
                 e.target.reset(); // Kosongkan form
                 loadAndRenderList('/api/master/gedungs', listGedung, 'nama_gedung', '/api/master/gedungs/'); // Refresh list
+                loadMasterData(true);
             } catch (error) {
                 alert(error.message);
             }
@@ -363,6 +364,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!response.ok) throw new Error('Gagal menyimpan kelas.');
                 e.target.reset(); // Kosongkan form
                 loadAndRenderList('/api/master/kelas', listKelas, 'nama_kelas'); // Refresh list
+                loadMasterData(true);
             } catch (error) {
                 alert(error.message);
             }
