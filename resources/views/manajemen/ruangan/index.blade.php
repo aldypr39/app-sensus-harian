@@ -5,7 +5,14 @@
 @section('content')
     <div class="section-header">
         <h1>Manajemen Ruangan Perawatan</h1>
-        <button id="btn-tambah-ruangan" class="header-action-btn"><i class="fas fa-plus"></i> Tambah Ruangan Baru</button>
+        <div class="header-actions">
+            <button id="btn-pengaturan-master" class="header-icon-btn" title="Pengaturan Data Master">
+                <i class="fas fa-cog"></i>
+            </button>
+            <button id="btn-tambah-ruangan" class="header-action-btn">
+                <i class="fas fa-plus"></i> Tambah Ruangan Baru
+            </button>
+        </div>
     </div>
     
     <div class="content-body">
@@ -35,8 +42,14 @@
                                 @endforeach
                             </td>
                             <td style="text-align: center;">
-                                <button class="btn-edit" data-id="{{ $ruangan->id }}">Edit</button>
-                                <button class="btn-delete" data-id="{{ $ruangan->id }}">Hapus</button>
+                                <div class="action-buttons">
+                                    <button class="btn-action-icon edit" data-id="{{ $ruangan->id }}" title="Edit Ruangan">
+                                        <i class="fas fa-pencil-alt"></i>
+                                    </button>
+                                    <button class="btn-action-icon delete" data-id="{{ $ruangan->id }}" title="Hapus Ruangan">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     @empty
@@ -86,6 +99,45 @@
             </form>
         </div>
     </div>
+
+    <div id="modal-master" class="modal">
+        <div class="modal-content glass-effect">
+            <span class="close-btn">&times;</span>
+            <h2>Pengaturan Data Master</h2>
+
+            <div class="tab-container-master">
+                <div class="tab-nav-master">
+                    <button class="tab-link-master active" data-tab="master-gedung">Manajemen Gedung</button>
+                    <button class="tab-link-master" data-tab="master-kelas">Manajemen Kelas</button>
+                </div>
+
+                <div class="tab-content-wrapper-master">
+                    {{-- Tab untuk Gedung --}}
+                    <div id="master-gedung" class="tab-content-master active">
+                        <form id="form-tambah-gedung" class="master-form">
+                            <input type="text" name="nama_gedung" placeholder="Ketik nama gedung baru..." required>
+                            <button type="submit">Tambah Gedung</button>
+                        </form>
+                        <ul id="list-gedung" class="master-list">
+                            {{-- Daftar gedung akan diisi oleh JavaScript --}}
+                        </ul>
+                    </div>
+
+                    {{-- Tab untuk Kelas --}}
+                    <div id="master-kelas" class="tab-content-master">
+                        <form id="form-tambah-kelas" class="master-form">
+                            <input type="text" name="nama_kelas" placeholder="Ketik nama kelas baru..." required>
+                            <button type="submit">Tambah Kelas</button>
+                        </form>
+                        <ul id="list-kelas" class="master-list">
+                            {{-- Daftar kelas akan diisi oleh JavaScript --}}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 @endsection
 
 @section('scripts')

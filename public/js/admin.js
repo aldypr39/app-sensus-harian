@@ -99,7 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const id = btn.dataset.id;
 
         // Jika tombol EDIT diklik
-        if (btn.classList.contains('btn-edit')) {
+        if (btn.classList.contains('edit')) {
             currentEditId = id; // Set mode ke "Edit"
             modalTitle.textContent = 'Edit Ruangan';
             formRuangan.reset();
@@ -128,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Jika tombol HAPUS diklik
-        if (btn.classList.contains('btn-delete')) {
+        if (btn.classList.contains('delete')) {
         // Tampilkan konfirmasi terlebih dahulu
           if (confirm('Apakah Anda yakin ingin menghapus ruangan ini? Semua data terkait (kelas, tempat tidur, pasien) juga akan terhapus.')) {
               try {
@@ -230,4 +230,169 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target === modalRuangan) closeModal();
     });
 
+
+    // --- AWAL KODE MANAJEMEN DATA MASTER ---
+
+    const btnPengaturanMaster = document.getElementById('btn-pengaturan-master');
+    const modalMaster = document.getElementById('modal-master');
+
+    if (btnPengaturanMaster && modalMaster) {
+        const closeMasterBtn = modalMaster.querySelector('.close-btn');
+        const tabLinks = modalMaster.querySelectorAll('.tab-link-master');
+        const tabContents = modalMaster.querySelectorAll('.tab-content-master');
+        const formTambahGedung = document.getElementById('form-tambah-gedung');
+        const formTambahKelas = document.getElementById('form-tambah-kelas');
+        const listGedung = document.getElementById('list-gedung');
+        const listKelas = document.getElementById('list-kelas');
+
+        const openMasterModal = () => modalMaster.classList.add('active');
+        const closeMasterModal = () => modalMaster.classList.remove('active');
+
+        // Fungsi untuk memuat dan menampilkan daftar
+        async function loadAndRenderList(url, listElement, nameKey, deleteUrlPrefix) {
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                listElement.innerHTML = ''; // Kosongkan list
+                data.forEach(item => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        <span>${item[nameKey]}</span>
+                        <button class="btn-hapus-master" data-id="${item.id}" title="Hapus item ini">&times;</button>
+                    `;
+                    listElement.appendChild(li);
+                });
+            } catch (error) {
+                console.error(`Gagal memuat data dari ${url}:`, error);
+                listElement.innerHTML = '<li>Gagal memuat data.</li>';
+            }
+        }
+
+        // Event listener untuk membuka modal
+        btnPengaturanMaster.addEventListener('click', () => {
+            openMasterModal();
+            // Muat data untuk tab yang aktif saat modal dibuka
+            loadAndRenderList('/api/master/gedungs', listGedung, 'nama_gedung', '/api/master/gedungs/');
+            loadAndRenderList('/api/master/kelas', listKelas, 'nama_kelas', '/api/master/kelas/');
+        });
+
+        // Event listener untuk menutup modal
+        closeMasterBtn.addEventListener('click', closeMasterModal);
+        window.addEventListener('click', (e) => {
+            if (e.target === modalMaster) closeMasterModal();
+        });
+
+        // Event listener untuk navigasi tab
+        tabLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                tabLinks.forEach(l => l.classList.remove('active'));
+                tabContents.forEach(c => c.classList.remove('active'));
+                link.classList.add('active');
+                document.getElementById(link.dataset.tab).classList.add('active');
+            });
+        });
+
+        // Event listener untuk form Tambah Gedung
+        formTambahGedung.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const namaGedung = e.target.elements.nama_gedung.value;
+            try {
+                const response = await fetch('/api/master/gedungs', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify({ nama_gedung: namaGedung })
+                });
+                if (!response.ok) throw new Error('Gagal menyimpan gedung.');
+                e.target.reset(); // Kosongkan form
+                loadAndRenderList('/api/master/gedungs', listGedung, 'nama_gedung', '/api/master/gedungs/'); // Refresh list
+            } catch (error) {
+                alert(error.message);
+            }
+        });
+
+        // Event listerner untuk menghapus list gedung
+        listGedung.addEventListener('click', async (e) => {
+            // Pastikan yang diklik adalah tombol hapus
+            if (e.target.classList.contains('btn-hapus-master')) {
+                const id = e.target.dataset.id;
+                
+                if (confirm('Apakah Anda yakin ingin menghapus gedung ini?')) {
+                    try {
+                        const response = await fetch(`/api/master/gedungs/${id}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                            }
+                        });
+
+                        const result = await response.json();
+                        if (!response.ok) throw new Error(result.message);
+
+                        alert(result.message);
+                        // Hapus item dari tampilan tanpa perlu refresh
+                        e.target.closest('li').remove();
+
+                    } catch (error) {
+                        console.error('Gagal menghapus gedung:', error);
+                        alert(error.message);
+                    }
+                }
+            }
+        });
+
+        
+        // Event listener untuk form Tambah Kelas
+        formTambahKelas.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const namaKelas = e.target.elements.nama_kelas.value;
+            try {
+                const response = await fetch('/api/master/kelas', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify({ nama_kelas: namaKelas })
+                });
+                if (!response.ok) throw new Error('Gagal menyimpan kelas.');
+                e.target.reset(); // Kosongkan form
+                loadAndRenderList('/api/master/kelas', listKelas, 'nama_kelas'); // Refresh list
+            } catch (error) {
+                alert(error.message);
+            }
+        });
+
+        // Event listener untuk menghapus item di list Kelas
+        listKelas.addEventListener('click', async (e) => {
+            if (e.target.classList.contains('btn-hapus-master')) {
+                const id = e.target.dataset.id;
+                
+                if (confirm('Apakah Anda yakin ingin menghapus kelas ini?')) {
+                    try {
+                        const response = await fetch(`/api/master/kelas/${id}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                            }
+                        });
+                        const result = await response.json();
+                        if (!response.ok) throw new Error(result.message);
+                        alert(result.message);
+                        e.target.closest('li').remove();
+                    } catch (error) {
+                        console.error('Gagal menghapus kelas:', error);
+                        alert(error.message);
+                    }
+                }
+            }
+        });
+
+    }
 });

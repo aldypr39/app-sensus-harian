@@ -4,6 +4,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PasienController;
 use App\Http\Controllers\RuanganController;
+use App\Http\Controllers\GedungController;
+use App\Http\Controllers\KelasController;
 
 /*
 |--------------------------------------------------------------------------
@@ -60,6 +62,12 @@ Route::middleware('auth')->group(function () {
     // Rute API untuk mengambil data master (dropdown)
     Route::get('/api/master/gedungs', [RuanganController::class, 'getAllGedungs']);
     Route::get('/api/master/kelas', [RuanganController::class, 'getAllKelas']);
+    // Rute untuk Manajemen Gedung
+    Route::post('/api/master/gedungs', [GedungController::class, 'store']);
+    Route::delete('/api/master/gedungs/{gedung}', [GedungController::class, 'destroy']);
+    // Rute untuk Manajemen Kelas
+    Route::post('/api/master/kelas', [KelasController::class, 'store']);
+    Route::delete('/api/master/kelas/{kelas}', [KelasController::class, 'destroy']);
     
     // Grup untuk semua halaman manajemen
     Route::prefix('manajemen')->group(function() {
@@ -69,6 +77,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/ruangan/{ruangan}/edit', [RuanganController::class, 'edit'])->name('ruangan.edit');
         Route::put('/ruangan/{ruangan}', [RuanganController::class, 'update'])->name('ruangan.update');
         Route::delete('/ruangan/{ruangan}', [RuanganController::class, 'destroy'])->name('ruangan.destroy');
+        
     });
 
 });
