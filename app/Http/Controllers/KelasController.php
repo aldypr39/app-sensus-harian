@@ -20,6 +20,11 @@ class KelasController extends Controller
         return response()->json($kelas, 201);
     }
 
+
+    public function index()
+    {
+    return response()->json(Kelas::all());
+    }
     /**
      * Menghapus data kelas.
      */

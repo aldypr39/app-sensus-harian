@@ -1,3 +1,5 @@
+import { showConfirm, showNotification } from './modules/utils.js';
+
 document.addEventListener('DOMContentLoaded', () => {
     // Pastikan skrip ini hanya berjalan di halaman manajemen ruangan
     const formRuangan = document.getElementById('form-ruangan');
@@ -129,30 +131,25 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Jika tombol HAPUS diklik
         if (btn.classList.contains('delete')) {
-        // Tampilkan konfirmasi terlebih dahulu
-          if (confirm('Apakah Anda yakin ingin menghapus ruangan ini? Semua data terkait (kelas, tempat tidur, pasien) juga akan terhapus.')) {
-              try {
-                  const response = await fetch(`/manajemen/ruangan/${id}`, {
-                      method: 'DELETE',
-                      headers: {
-                          'Accept': 'application/json',
-                          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                      }
-                  });
-
-                  const result = await response.json();
-                  if (!response.ok) throw new Error(result.message);
-
-                  alert(result.message);
-                  // Hapus baris dari tabel secara langsung tanpa refresh
-                  btn.closest('tr').remove();
-
-              } catch (error) {
-                  console.error('Gagal menghapus ruangan:', error);
-                  alert(error.message);
-              }
-          }
-      }
+            if (await showConfirm('Anda Yakin?', 'Ruangan dan semua data terkait akan dihapus permanen!')) {
+                try {
+                    const response = await fetch(`/manajemen/ruangan/${id}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        },
+                        body: JSON.stringify({ '_method': 'DELETE' })
+                    });
+                    const result = await response.json();
+                    if (!response.ok) throw new Error(result.message);
+                    showNotification('Berhasil!', result.message, 'success');
+                    btn.closest('tr').remove();
+                } catch (error) {
+                    showNotification('Gagal!', error.message, 'error');
+                }
+            }
+        }
     });
 
     // 3. Event listener untuk "Tambah Kelas" di dalam modal
@@ -207,16 +204,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const result = await response.json();
 
             if (!response.ok) {
-                if (response.status === 422) {
-                    const errorMessages = Object.values(result.errors).map(err => `- ${err[0]}`).join('\n');
-                    alert(`Error Validasi:\n${errorMessages}`);
-                } else {
-                    throw new Error(result.message || 'Gagal menyimpan data.');
-                }
+                if(response.status === 422) {
+                    const errors = Object.values(result.errors).map(err => `- ${err[0]}`).join('\n');
+                    showNotification('Validasi Gagal', errors, 'error');
+                } else { throw new Error(result.message || 'Gagal menyimpan data'); }
             } else {
-                alert(result.message);
+                showNotification('Berhasil!', result.message, 'success');
                 closeModal();
-                window.location.reload();
+                setTimeout(() => window.location.reload(), 1500);
             }
         } catch (error) {
             console.error("Error saat menyimpan:", error);

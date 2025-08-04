@@ -1,105 +1,136 @@
-import { DataManager, dataStore } from './modules/dataManager.js';
-import { UIController }      from './modules/uiController.js';
-import { Utils }             from './modules/utils.js';
+import { showConfirm, showNotification } from './modules/utils.js';
 
 document.addEventListener('DOMContentLoaded', () => {
-  if (!window.location.pathname.includes('admin_akun')) return;
-  // 1) Muat data yang sudah disimpan di localStorage
-  DataManager.load();
-  // isi dropdown ruangan
-  const pilihRuangan = document.getElementById('pilih-ruangan');
-  if (pilihRuangan) {
-    pilihRuangan.innerHTML = '';             // kosongkan dulu
-    dataStore.ruangan.forEach(r => {
-      if (r.is_active) {
-        const opt = document.createElement('option');
-        opt.value = r.id;
-        opt.textContent = r.nama;
-        pilihRuangan.appendChild(opt);
-      }
+    // Referensi Elemen
+    const modalAkun = document.getElementById('modal-akun');
+    const formAkun = document.getElementById('form-akun');
+    const btnTambahAkun = document.getElementById('btn-tambah-akun');
+    const modalTitle = document.getElementById('modal-akun-title');
+    const tableBody = document.querySelector('.table-container tbody');
+    const closeBtn = modalAkun.querySelector('.close-btn');
+
+    let currentEditId = null;
+
+    const openModal = () => modalAkun.classList.add('active');
+    const closeModal = () => modalAkun.classList.remove('active');
+
+    // Fungsi untuk mengisi dropdown ruangan dari server
+    async function populateRuanganDropdown(selectedValue = null) {
+        const select = document.getElementById('ruangan_id');
+        try {
+            const response = await fetch('/api/ruangans');
+            const ruangans = await response.json();
+            select.innerHTML = '<option value="">Pilih Ruangan</option>';
+            ruangans.forEach(r => {
+                const opt = document.createElement('option');
+                opt.value = r.id;
+                opt.textContent = r.nama_ruangan;
+                if(r.id == selectedValue) opt.selected = true;
+                select.appendChild(opt);
+            });
+        } catch (error) {
+            select.innerHTML = '<option value="">Gagal memuat ruangan</option>';
+        }
+    }
+
+    // Event saat tombol "Buat Akun Baru" diklik
+    btnTambahAkun.addEventListener('click', () => {
+        currentEditId = null;
+        formAkun.reset();
+        modalTitle.textContent = 'Buat Akun Baru';
+        formAkun.querySelector('#password').required = true;
+        populateRuanganDropdown();
+        openModal();
     });
-  }
 
-  // 2) Inisialisasi tampilan tabel akun
-  UIController.renderAkunAdmin();
+    // Event untuk tombol di tabel (Edit & Hapus)
+    tableBody.addEventListener('click', async (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        const id = btn.dataset.id;
 
-  const modalAkun      = document.getElementById('modal-akun');
-  const formAkun       = document.getElementById('form-akun');
-  const btnTambahAkun  = document.getElementById('btn-tambah-akun');
-  const closeBtn       = modalAkun.querySelector('.close-btn');
-  let currentEditAkunId = null;
+        // Logika Tombol Edit
+        if (btn.classList.contains('edit')) {
+            currentEditId = id;
+            formAkun.reset();
+            modalTitle.textContent = 'Edit Akun';
+            formAkun.querySelector('#password').required = false; // Password tidak wajib saat edit
+            
+            try {
+                const response = await fetch(`/manajemen/akun/${id}/edit`);
+                const user = await response.json();
+                populateRuanganDropdown(user.ruangan_id);
+                formAkun.querySelector('#name').value = user.name;
+                formAkun.querySelector('#username').value = user.username;
+                openModal();
+            } catch (error) {
+                showNotification('Gagal', 'Gagal memuat data akun.', 'error');
+            }
+        }
 
-  // buka/tutup modal
-  function openModal()  { modalAkun.classList.add('active'); }
-  function closeModal() { modalAkun.classList.remove('active'); }
+        // Logika Tombol Hapus
+        if (btn.classList.contains('delete')) {
+            if (await showConfirm('Anda Yakin?', 'Akun ini akan dihapus permanen.')) {
+                try {
+                    const response = await fetch(`/manajemen/akun/${id}`, {
+                        method: 'POST', // Selalu POST
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        },
+                        body: JSON.stringify({ '_method': 'DELETE' }) // Method Spoofing
+                    });
+                    const result = await response.json();
+                    if (!response.ok) throw new Error(result.message);
+                    showNotification('Berhasil!', result.message, 'success');
+                    btn.closest('tr').remove();
+                } catch (error) {
+                    showNotification('Gagal!', error.message, 'error');
+                }
+            }
+        }
+    });
 
-  // tombol “Buat Akun Baru”
-  btnTambahAkun.addEventListener('click', () => {
-    currentEditAkunId = null;
-    formAkun.reset();
-    modalAkun.querySelector('h2').textContent = 'Buat Akun Ruangan Baru';
-    openModal();
-  });
+    // Event saat form disubmit
+    formAkun.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(formAkun);
+        const data = Object.fromEntries(formData.entries());
 
-  closeBtn.addEventListener('click', closeModal);
-  window.addEventListener('click', e => {
-    if (e.target === modalAkun) closeModal();
-  });
+        const url = currentEditId ? `/manajemen/akun/${currentEditId}` : '/manajemen/akun';
+        const method = currentEditId ? 'PUT' : 'POST';
 
-  // handle submit form akun
-  formAkun.addEventListener('submit', e => {
-    e.preventDefault();
-    const data = {
-      ruangan_id: parseInt(formAkun.ruangan_id.value, 10),
-      username:   formAkun.username.value.trim(),
-      password:   formAkun.password.value
-    };
-    const passConfirm = formAkun.password_confirmation.value;
-    if (data.password !== passConfirm) {
-      Utils.showNotification('Password dan konfirmasi tidak cocok', 'error');
-      return;
-    }
-    let result;
-    if (currentEditAkunId) {
-      result = DataManager.users.update(currentEditAkunId, data);
-      Utils.showNotification('Akun berhasil diperbarui', 'success');
-    } else {
-      result = DataManager.users.create(data);
-      Utils.showNotification('Akun baru berhasil dibuat', 'success');
-    }
-    if (result) {
-      UIController.renderAkunAdmin();
-      closeModal();
-    }
-  });
+        try {
+            const response = await fetch(url, {
+                method: 'POST', // Selalu POST
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify({ ...data, '_method': method }) // Method Spoofing
+            });
+            const result = await response.json();
 
-  // handle klik edit/delete di tabel
-  document.querySelector('.admin-content table tbody').addEventListener('click', e => {
-    const btn = e.target.closest('button');
-    if (!btn) return;
-    const id = parseInt(btn.dataset.id, 10);
+            if (!response.ok) {
+                if(response.status === 422) {
+                    const errors = Object.values(result.errors).map(err => `- ${err[0]}`).join('\n');
+                    showNotification('Validasi Gagal', errors, 'error');
+                } else { throw new Error(result.message); }
+            } else {
+                showNotification('Berhasil!', result.message, 'success');
+                closeModal();
+                setTimeout(() => window.location.reload(), 1500);
+            }
+        } catch (error) {
+            showNotification('Gagal!', error.message, 'error');
+        }
+    });
 
-    if (btn.classList.contains('btn-edit')) {
-      const user = dataStore.users.find(u => u.id === id);
-      if (!user) return;
-      currentEditAkunId = id;
-      formAkun.ruangan_id.value = user.ruangan_id;
-      formAkun.username.value   = user.username;
-      formAkun.password.value   = '';
-      formAkun.password_confirmation.value = '';
-      modalAkun.querySelector('h2').textContent = 'Edit Akun Ruangan';
-      openModal();
-    }
-
-    if (btn.classList.contains('btn-delete')) {
-      if (confirm('Yakin ingin menghapus akun ini?')) {
-        DataManager.users.delete(id);
-        UIController.renderAkunAdmin();
-        Utils.showNotification('Akun berhasil dihapus', 'success');
-      }
-    }
-  });
-
-  // render awal
-  UIController.renderAkunAdmin();
+    // Event untuk menutup modal
+    closeBtn.addEventListener('click', closeModal);
+    window.addEventListener('click', (e) => {
+        if (e.target === modalAkun) closeModal();
+    });
 });

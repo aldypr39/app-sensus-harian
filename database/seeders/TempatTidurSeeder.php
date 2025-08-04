@@ -4,27 +4,40 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\TempatTidur;
-use Illuminate\Support\Facades\DB; // <-- Gunakan DB facade
+use App\Models\KelasPerawatan;
+use Illuminate\Support\Facades\DB;
 
 class TempatTidurSeeder extends Seeder
 {
+    /**
+     * Run the database seeds.
+     */
     public function run(): void
     {
-    // --- UBAH QUERY INI ---
-    // Ambil data kelas perawatan DAN gabungkan dengan tabel 'kelas' untuk dapat nama_kelas
-    $semuaKelasPerawatan = DB::table('kelas_perawatans')
-        ->join('kelas', 'kelas_perawatans.kelas_id', '=', 'kelas.id')
-        ->select('kelas_perawatans.*', 'kelas.nama_kelas')
-        ->get();
+        
+        
 
-    foreach ($semuaKelasPerawatan as $kp) {
-        // Loop sebanyak jumlah_tt untuk setiap kelas
-        for ($i = 1; $i <= $kp->jumlah_tt; $i++) {
-            TempatTidur::create([
-                'ruangan_id' => $kp->ruangan_id,
-                'kelas_id'   => $kp->kelas_id, // <-- Pastikan ini 'kelas_id'
-                'nomor_tt'   => $kp->nama_kelas . '-' . str_pad($i, 2, '0', STR_PAD_LEFT),
-                'status'     => 'tersedia',
+        // Ambil semua data kelas perawatan DAN gabungkan dengan tabel lain untuk dapat nama
+        $semuaKelasPerawatan = DB::table('kelas_perawatans')
+            ->join('ruangans', 'kelas_perawatans.ruangan_id', '=', 'ruangans.id')
+            ->join('kelas', 'kelas_perawatans.kelas_id', '=', 'kelas.id')
+            ->select(
+                'kelas_perawatans.jumlah_tt',
+                'ruangans.id as ruangan_id',
+                'ruangans.nama_ruangan',
+                'kelas.id as kelas_id',
+                'kelas.nama_kelas'
+            )
+            ->get();
+
+        foreach ($semuaKelasPerawatan as $kp) {
+            $namaSingkatRuangan = strtok($kp->nama_ruangan, " "); // Ambil kata pertama dari nama ruangan
+            for ($i = 1; $i <= $kp->jumlah_tt; $i++) {
+                TempatTidur::create([
+                    'ruangan_id' => $kp->ruangan_id,
+                    'kelas_id'   => $kp->kelas_id,
+                    'nomor_tt'   => $namaSingkatRuangan . '-' . $kp->nama_kelas . '-' . $i,
+                    'status'     => 'tersedia',
                 ]);
             }
         }

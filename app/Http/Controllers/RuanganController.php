@@ -21,9 +21,9 @@ class RuanganController extends Controller
         return view('manajemen.ruangan.index', ['ruangans' => $ruangans]);
     }
 
-     public function store(Request $request)
+    public function store(Request $request)
     {
-        // 1. Validasi data yang masuk
+        // 1. Validasi data (tidak berubah)
         $validated = $request->validate([
             'nama_ruangan' => 'required|string|max:255|unique:ruangans,nama_ruangan',
             'gedung_id' => 'required|integer|exists:gedungs,id',
@@ -33,25 +33,36 @@ class RuanganController extends Controller
             'classes.*.jumlah_tt' => 'required|integer|min:1',
         ]);
 
-        // 2. Gunakan transaction untuk memastikan semua data berhasil disimpan
         DB::transaction(function () use ($validated) {
-            // 3. Buat ruangan baru
+            // 2. Buat ruangan baru (tidak berubah)
             $ruangan = Ruangan::create([
                 'nama_ruangan' => $validated['nama_ruangan'],
                 'gedung_id' => $validated['gedung_id'],
                 'lantai' => $validated['lantai'],
             ]);
 
-            // 4. Loop dan simpan setiap kelas perawatan yang terhubung
+            // 3. Loop dan simpan setiap kelas perawatan (tidak berubah)
             foreach ($validated['classes'] as $kelasData) {
-                $ruangan->kelasPerawatans()->create([
+                $kelas = Kelas::find($kelasData['kelas_id']);
+                
+                $kp = $ruangan->kelasPerawatans()->create([
                     'kelas_id' => $kelasData['kelas_id'],
                     'jumlah_tt' => $kelasData['jumlah_tt'],
                 ]);
+
+                // --- TAMBAHAN PENTING ---
+                // 4. Buat record tempat tidur fisik berdasarkan data kelas yang baru
+                for ($i = 1; $i <= $kp->jumlah_tt; $i++) {
+                    TempatTidur::create([
+                        'ruangan_id' => $ruangan->id,
+                        'kelas_id' => $kp->kelas_id,
+                        'nomor_tt' => strtok($ruangan->nama_ruangan, " ") . '-' . $kelas->nama_kelas . '-' . $i,
+                    ]);
+                }
             }
         });
 
-        // 5. Kembalikan respon sukses
+        // 5. Kembalikan respon sukses (tidak berubah)
         return response()->json(['message' => 'Ruangan berhasil ditambahkan!'], 201);
     }
 

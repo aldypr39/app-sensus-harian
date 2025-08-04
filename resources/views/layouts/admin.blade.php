@@ -24,11 +24,11 @@
                 <h2>Panel Admin</h2>
             </div>
             <ul class="sidebar-nav">
-                <li class="nav-item {{ request()->is('manajemen/akun*') ? 'active' : '' }}">
-                    <a href="#"><i class="fas fa-users-cog"></i> Manajemen Akun</a>
+                <li class="nav-item {{ request()->routeIs('manajemen.akun.*') ? 'active' : '' }}">
+                    <a href="{{ route('manajemen.akun.index') }}"><i class="fas fa-users-cog"></i> Manajemen Akun</a>
                 </li>
-                <li class="nav-item {{ request()->is('manajemen/ruangan*') ? 'active' : '' }}">
-                    <a href="{{ route('ruangan.index') }}"><i class="fas fa-door-open"></i> Manajemen Ruangan</a>
+                <li class="nav-item {{ request()->routeIs('manajemen.ruangan.*') ? 'active' : '' }}">
+                    <a href="{{ route('manajemen.ruangan.index') }}"><i class="fas fa-door-open"></i> Manajemen Ruangan</a>
                 </li>
             </ul>
             <div class="sidebar-footer">
@@ -40,6 +40,8 @@
             @yield('content')
         </main>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     @yield('scripts')
 </body>

@@ -25,6 +25,11 @@ class GedungController extends Controller
         // 3. Kembalikan data gedung yang baru dibuat sebagai JSON
         return response()->json($gedung, 201);
     }
+
+    public function index()
+    {
+    return response()->json(Gedung::orderBy('nama_gedung')->get());
+    }
     /**
      * Menghapus gedung berdasarkan ID.
      */
