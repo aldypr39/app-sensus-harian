@@ -19,26 +19,21 @@ class Pasien extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'no_rm',
-        'nama_pasien',
-        'jenis_kelamin',
-        'tgl_masuk',
-        'asal_pasien',
-        'ruangan_id',
-        'kelas',
-        'no_tt',
-        'status',
-        'tgl_keluar',
-        'keadaan_keluar',
-        'lama_dirawat',
+        'no_rm', 'nama_pasien', 'jenis_kelamin', 'tgl_masuk',
+        'asal_pasien', 'tempat_tidur_id', 'status', 'tgl_keluar',
+        'keadaan_keluar', 'lama_dirawat',
     ];
 
-    /**
-     * Mendefinisikan relasi ke model Ruangan.
-     */
+    // Relasi untuk mendapatkan data tempat tidur
+    public function tempatTidur()
+    {
+        return $this->belongsTo(TempatTidur::class);
+    }
+
+    // Relasi 'shortcut' untuk mendapatkan data ruangan melalui tempat tidur
     public function ruangan()
     {
-        return $this->belongsTo(Ruangan::class);
+        return $this->hasOneThrough(Ruangan::class, TempatTidur::class, 'id', 'id', 'tempat_tidur_id', 'ruangan_id');
     }
 
     public static function hitungLamaDirawat($tglMasuk, $tglKeluar) // <-- INI FUNGSI YANG HILANG

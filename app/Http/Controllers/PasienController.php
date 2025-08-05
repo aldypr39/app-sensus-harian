@@ -24,15 +24,18 @@ class PasienController extends Controller
         $user = Auth::user();
 
         // Query dasar untuk pasien aktif
-        $query = Pasien::where('status', 'aktif');
+        $query = Pasien::where('status', 'aktif')->with('tempatTidur.ruangan', 'tempatTidur.kelas');
 
         // Jika user bukan admin, filter berdasarkan ruangannya
         if ($user->role !== 'admin') {
-            $query->where('ruangan_id', $user->ruangan_id);
+            $ruanganId = $user->ruangan_id;
+            // Gunakan whereHas untuk filter berdasarkan relasi
+            $query->whereHas('tempatTidur', function ($q) use ($ruanganId) {
+                $q->where('ruangan_id', $ruanganId);
+            });
         }
 
-        // Ambil data dan urutkan berdasarkan tanggal masuk terbaru
-        $pasiens = $query->orderBy('tgl_masuk', 'desc')->get();
+    $pasiens = $query->latest('tgl_masuk')->get();
 
         // Hitung lama dirawat untuk setiap pasien sebelum dikirim
         $pasiens->each(function ($pasien) {
@@ -59,22 +62,18 @@ class PasienController extends Controller
             'jenis_kelamin' => 'required|in:L,P',
             'tgl_masuk' => 'required|date',
             'asal_pasien' => 'required|string',
-            'kelas' => 'required|string',
-            'no_tt' => 'required|string',
+            'tempat_tidur_id' => 'required|integer|exists:tempat_tidurs,id',
         ]);
 
-        // 2. Tambahkan ruangan_id dan status
-        $validatedData['ruangan_id'] = Auth::user()->ruangan_id;
         $validatedData['status'] = 'aktif';
-
-        // 3. Simpan ke database
         $pasien = Pasien::create($validatedData);
+
+        
 
         // 4. Update status tempat tidur yang dipilih menjadi 'terisi'
         if ($pasien) {
-            TempatTidur::where('ruangan_id', $pasien->ruangan_id)
-                        ->where('nomor_tt', $pasien->no_tt)
-                        ->update(['status' => 'terisi']);
+            TempatTidur::where('id', $pasien->tempat_tidur_id)
+                    ->update(['status' => 'terisi']);
         }
 
         // 5. Kembalikan respon sukses beserta data pasien yang baru dibuat
@@ -86,13 +85,20 @@ class PasienController extends Controller
     {
         // 1. Validasi data yang masuk dari form
         $validated = $request->validate([
-            'tgl_keluar' => 'required|date',
-            'keadaan_keluar' => 'required|string',
-        ]);
+        'tgl_keluar' => 'required|date|after_or_equal:' . $pasien->tgl_masuk,
+        'keadaan_keluar' => 'required|string',
+         ]);
 
         // 2. Hitung lama dirawat final menggunakan fungsi yang sudah kita buat
-        $lamaDirawat = Pasien::hitungLamaDirawat($pasien->tgl_masuk, $validated['tgl_keluar']);
+        $tglMasuk = new Carbon($pasien->tgl_masuk);
+        $tglKeluar = new Carbon($validated['tgl_keluar']);
+        // Hitung selisih hari, jika hasilnya 0 maka dianggap 1 hari
+        $lamaDirawat = $tglMasuk->startOfDay()->diffInDays($tglKeluar->startOfDay()) ?: 1;
 
+        
+        TempatTidur::where('id', $pasien->tempat_tidur_id)
+                   ->update(['status' => 'tersedia']);
+        
         // 3. Update data pasien tersebut di database
         $pasien->status = 'keluar';
         $pasien->tgl_keluar = $validated['tgl_keluar'];
@@ -103,11 +109,7 @@ class PasienController extends Controller
         $pasien->save();
 
         // 4. Update status tempat tidur yang ditinggalkan menjadi 'tersedia'
-        if ($pasien->wasChanged()) {
-            TempatTidur::where('ruangan_id', $pasien->ruangan_id)
-                        ->where('nomor_tt', $pasien->no_tt)
-                        ->update(['status' => 'tersedia']);
-        }
+        
 
         // 5. Kembalikan respon sukses
         return response()->json([
@@ -116,82 +118,7 @@ class PasienController extends Controller
         ]);
     }
 
-    // Mendapatkan riwayat pasien yang sudah keluar
-    public function getDischargedPatients()
-    {
-        $user = Auth::user();
-        $query = Pasien::where('status', 'keluar');
-
-        if ($user->role !== 'admin') {
-            $query->where('ruangan_id', $user->ruangan_id);
-        }
-
-        // Ambil riwayat 30 hari terakhir sebagai default
-        $pasiens = $query->where('tgl_keluar', '>=', Carbon::now()->subDays(30))
-                        ->orderBy('tgl_keluar', 'desc')
-                        ->get();
-
-        return response()->json($pasiens);
-    }
-
-    // Mendapatkan detail pasien untuk edit
-    // Kita gunakan Route-Model Binding untuk otomatis mencari pasien berdasarkan ID
-    public function show(Pasien $pasien)
-    {
-        
-        return response()->json($pasien);
-    }
-
-    // Menyimpan perubahan pasien (update)
-    public function update(Request $request, Pasien $pasien)
-    {
-        // 1. Validasi data (mirip seperti store, tapi aturan 'unique' diubah)
-        $validatedData = $request->validate([
-            // no_rm harus unik, KECUALI untuk ID pasien ini sendiri
-            'no_rm' => 'required|string|unique:pasiens,no_rm,' . $pasien->id,
-            'nama_pasien' => 'required|string|max:255',
-            'jenis_kelamin' => 'required|in:L,P',
-            'tgl_masuk' => 'required|date',
-            'asal_pasien' => 'required|string',
-            'kelas' => 'required|string',
-            'no_tt' => 'required|string',
-        ]);
-
-        // 2. Cek apakah tempat tidur berubah
-        $tempatTidurBerubah = $validatedData['no_tt'] !== $pasien->no_tt;
-
-        if ($tempatTidurBerubah) {
-            // Jika berubah, kosongkan tempat tidur lama
-            TempatTidur::where('ruangan_id', $pasien->ruangan_id)
-                        ->where('nomor_tt', $pasien->no_tt)
-                        ->update(['status' => 'tersedia']);
-            
-            // Dan isi tempat tidur yang baru
-            TempatTidur::where('ruangan_id', $pasien->ruangan_id)
-                        ->where('nomor_tt', $validatedData['no_tt'])
-                        ->update(['status' => 'terisi']);
-        }
-
-        // 2. Update data pasien dengan data yang divalidasi
-        $pasien->update($validatedData);
-
-        // 3. Kembalikan respon sukses
-        return response()->json([
-            'message' => 'Data pasien berhasil diperbarui!',
-            'pasien' => $pasien
-        ]);
-    }
-
-    public function destroy(Pasien $pasien)
-    {
-        // Hapus data pasien yang ditemukan berdasarkan ID dari URL
-        $pasien->delete();
-
-        // Kembalikan respon sukses
-        return response()->json(['message' => 'Data pasien berhasil dihapus secara permanen.']);
-    }
-
-    
+    // Batalkan status pulang pasien
     public function batalkanPulang($id)
     {
         DB::beginTransaction();
@@ -201,9 +128,7 @@ class PasienController extends Controller
 
             // 1. Update status tempat tidur menjadi 'terisi'
             // 1. KITA TAMBAHKAN INI: Ambil data tempat tidur yang terkait dengan pasien
-            $tempatTidur = TempatTidur::where('ruangan_id', $pasien->ruangan_id)
-                                    ->where('nomor_tt', $pasien->no_tt)
-                                    ->first();
+             $tempatTidur = TempatTidur::find($pasien->tempat_tidur_id);
 
             // 2. KITA TAMBAHKAN BLOK INI: Logika untuk memeriksa jika TT sudah terisi
             //    Jika tempat tidur ditemukan dan statusnya sudah 'terisi' oleh pasien lain
@@ -211,7 +136,7 @@ class PasienController extends Controller
                 // Hentikan proses dan kirim pesan error
                 DB::rollBack();
                 return response()->json([
-                    'message' => 'Gagal! Tempat tidur ' . $pasien->no_tt . ' sudah ditempati oleh pasien lain.'
+                    'message' => 'Gagal! Tempat tidur ' . $tempatTidur->nomor_tt . ' sudah ditempati oleh pasien lain.'
                 ], 409); // 409 Conflict
             }
 
@@ -238,6 +163,91 @@ class PasienController extends Controller
         }
     }
 
+    // Mendapatkan riwayat pasien yang sudah keluar
+    public function getDischargedPatients()
+    {
+        $user = Auth::user();
+        $query = Pasien::where('status', 'keluar')->with('tempatTidur.ruangan', 'tempatTidur.kelas');
+
+        if ($user->role !== 'admin') {
+            $ruanganId = $user->ruangan_id;
+            // Gunakan whereHas untuk filter berdasarkan relasi
+            $query->whereHas('tempatTidur', function ($q) use ($ruanganId) {
+                $q->where('ruangan_id', $ruanganId);
+            });
+        }
+
+        $pasiens = $query->latest('tgl_keluar')->get();
+
+        return response()->json($pasiens);
+    }
+
+    // Mendapatkan detail pasien untuk edit
+    // Kita gunakan Route-Model Binding untuk otomatis mencari pasien berdasarkan ID
+    public function show(Pasien $pasien)
+    {
+        
+        return response()->json($pasien);
+    }
+
+    // Menyimpan perubahan pasien (update)
+    public function update(Request $request, Pasien $pasien)
+    {
+        // 1. Validasi data yang masuk
+        $validatedData = $request->validate([
+            'no_rm' => 'required|string|unique:pasiens,no_rm,' . $pasien->id,
+            'nama_pasien' => 'required|string|max:255',
+            'jenis_kelamin' => 'required|in:L,P',
+            'tgl_masuk' => 'required|date',
+            'asal_pasien' => 'required|string',
+            'tempat_tidur_id' => 'required|integer|exists:tempat_tidurs,id',
+        ]);
+
+        // 2. Cek apakah tempat tidur benar-benar berubah
+        $tempatTidurBerubah = $validatedData['tempat_tidur_id'] != $pasien->tempat_tidur_id;
+
+        if ($tempatTidurBerubah) {
+            // Jika berubah, kosongkan tempat tidur LAMA
+            TempatTidur::where('id', $pasien->tempat_tidur_id)
+                        ->update(['status' => 'tersedia']);
+            
+            // Dan isi tempat tidur BARU
+            TempatTidur::where('id', $validatedData['tempat_tidur_id'])
+                        ->update(['status' => 'terisi']);
+        }
+
+        // 3. Update data pasien dengan data yang divalidasi
+        $pasien->update($validatedData);
+
+        // 4. Kembalikan respon sukses
+        return response()->json([
+            'message' => 'Data pasien berhasil diperbarui!',
+            'pasien' => $pasien
+        ]);
+    }
+
+    public function destroy(Pasien $pasien)
+    {
+        // Hapus data pasien yang ditemukan berdasarkan ID dari URL
+         // 1. Simpan dulu ID tempat tidur yang akan ditinggalkan
+        $tempatTidurId = $pasien->tempat_tidur_id;
+
+        // 2. Hapus data pasien
+        $pasien->delete();
+
+        // 3. Update status tempat tidur yang ditinggalkan menjadi 'tersedia'
+        if ($tempatTidurId) {
+            TempatTidur::where('id', $tempatTidurId)
+                    ->update(['status' => 'tersedia']);
+        }
+
+        // Kembalikan respon sukses
+        return response()->json(['message' => 'Data pasien berhasil dihapus secara permanen.']);
+    }
+
+    
+    
+
     public function getDashboardStats()
     {
         $user = Auth::user();
@@ -262,22 +272,35 @@ class PasienController extends Controller
         }
 
         // --- Blok untuk Perawat Ruangan ---
-        $ruangan_id = $ruangan->id;
-        $total_tempat_tidur = TempatTidur::where('ruangan_id', $ruangan_id)->count();
-        $jumlah_pasien_saat_ini = Pasien::where('ruangan_id', $ruangan_id)->whereNull('tgl_keluar')->count();
-        $pasien_masuk_hari_ini = Pasien::where('ruangan_id', $ruangan_id)->whereDate('tgl_masuk', today())->count();
-        $pasien_keluar_hari_ini = Pasien::where('ruangan_id', $ruangan_id)->whereDate('tgl_keluar', today())->count();
-        $pasien_sisa_kemarin = ($jumlah_pasien_saat_ini - $pasien_masuk_hari_ini) + $pasien_keluar_hari_ini;
+            $ruangan_id = $ruangan->id;
 
-        return response()->json([
-            'nama_ruangan' => $ruangan->nama_ruangan,
-            'tempat_tidur_tersedia' => $total_tempat_tidur - $jumlah_pasien_saat_ini,
-            'total_tempat_tidur' => $total_tempat_tidur,
-            'pasien_sisa_kemarin' => $pasien_sisa_kemarin,
-            'pasien_masuk_hari_ini' => $pasien_masuk_hari_ini, // <-- Pastikan ini ada
-            'pasien_keluar_hari_ini' => $pasien_keluar_hari_ini,
-            'jumlah_pasien_saat_ini' => $jumlah_pasien_saat_ini,
-        ]);
+            // Hitung statistik dengan filter melalui relasi
+            $pasien_masuk_hari_ini = Pasien::whereHas('tempatTidur', function ($q) use ($ruangan_id) {
+                $q->where('ruangan_id', $ruangan_id);
+            })->whereDate('tgl_masuk', today())->count();
+
+            $pasien_keluar_hari_ini = Pasien::whereHas('tempatTidur', function ($q) use ($ruangan_id) {
+                $q->where('ruangan_id', $ruangan_id);
+            })->whereDate('tgl_keluar', today())->count();
+
+            $jumlah_pasien_saat_ini = Pasien::whereHas('tempatTidur', function ($q) use ($ruangan_id) {
+                $q->where('ruangan_id', $ruangan_id);
+            })->whereNull('tgl_keluar')->count();
+            
+            $pasien_sisa_kemarin = ($jumlah_pasien_saat_ini - $pasien_masuk_hari_ini) + $pasien_keluar_hari_ini;
+            
+            $total_tempat_tidur = TempatTidur::where('ruangan_id', $ruangan_id)->count();
+
+            return response()->json([
+                'nama_ruangan' => $ruangan->nama_ruangan,
+                'tempat_tidur_tersedia' => $total_tempat_tidur - $jumlah_pasien_saat_ini,
+                'total_tempat_tidur' => $total_tempat_tidur,
+                'pasien_sisa_kemarin' => $pasien_sisa_kemarin,
+                'pasien_masuk_hari_ini' => $pasien_masuk_hari_ini,
+                'pasien_keluar_hari_ini' => $pasien_keluar_hari_ini,
+                'jumlah_pasien_saat_ini' => $jumlah_pasien_saat_ini,
+            ]);
+
     }
 
     public function getKelasTersedia()
@@ -304,9 +327,9 @@ class PasienController extends Controller
         $kelasId = $request->input('kelas_id');
 
         $tempatTidur = TempatTidur::where('ruangan_id', $ruanganId)
-                                    ->where('kelas_id', $kelasId) // Filter berdasarkan kelas_id
+                                    ->where('kelas_id', $kelasId)
                                     ->where('status', 'tersedia')
-                                    ->pluck('nomor_tt');
+                                    ->get(['id', 'nomor_tt']);
 
         return response()->json($tempatTidur);
     }

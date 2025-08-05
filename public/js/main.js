@@ -88,6 +88,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const tglMasuk = new Date(pasien.tgl_masuk).toLocaleDateString('id-ID', {
                 day: '2-digit', month: 'short', year: 'numeric'
             });
+            
+            const namaKelas = pasien.tempat_tidur?.kelas?.nama_kelas ?? 'N/A';
+            const noTT = pasien.tempat_tidur?.nomor_tt ?? 'N/A';
 
             const row = `
                 <tr data-tgl-masuk="${pasien.tgl_masuk}">
@@ -97,8 +100,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${pasien.jenis_kelamin}</td>
                     <td>${tglMasuk}</td>
                     <td>${pasien.lama_dirawat} hari</td>
-                    <td>${pasien.kelas}</td>
-                    <td>${pasien.no_tt}</td>
+                    <td>${namaKelas}</td>
+                    <td>${noTT}</td>
                     <td>
                         <div class="actions-cell">
                         <button class="btn-action-icon edit" title="Edit Data Pasien" data-id="${pasien.id}">
@@ -136,6 +139,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const tglMasuk = new Date(pasien.tgl_masuk).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
             const tglKeluar = new Date(pasien.tgl_keluar).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
             
+            const namaKelas = (pasien.tempat_tidur && pasien.tempat_tidur.kelas) ? pasien.tempat_tidur.kelas.nama_kelas : 'N/A';
+
             const row = `
                 <tr>
                     <td>${index + 1}</td>
@@ -145,7 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${tglMasuk}</td>
                     <td>${tglKeluar}</td>
                     <td>${pasien.lama_dirawat}</td>
-                    <td>${pasien.kelas}</td>
+                    <td>${namaKelas}</td>
                     <td>${pasien.keadaan_keluar}</td>
                     <td>
                         <button class="btn-aksi btn-batal-pulang" data-id="${pasien.id}" title="Batalkan status pulang pasien ini">
@@ -200,19 +205,31 @@ document.addEventListener('DOMContentLoaded', () => {
     // Event listener untuk tombol "Tambah Pasien Masuk"
     if (btnTambahPasien) {
         btnTambahPasien.addEventListener('click', async () => {
+            // Reset form dan judul modal
             formPasien.reset();
             formPasien.removeAttribute('data-edit-id');
             modalTambahPasien.querySelector('h2').textContent = 'Form Tambah Pasien Masuk';
 
-            // --- AWAL KODE BARU ---
+            // --- INI BAGIAN KUNCINYA ---
+            // 1. Ambil elemen input tanggal
             const tglMasukInput = document.getElementById('tgl_masuk');
             const now = new Date();
-            // Format tanggal ke YYYY-MM-DDTHH:mm untuk atribut 'max'
-            const maxDateTime = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
-            tglMasukInput.max = maxDateTime;
-            // --- AKHIR KODE BARU ---
             
-            // Kosongkan dan nonaktifkan dropdown
+            // 2. Format tanggal ke YYYY-MM-DDTHH:mm untuk waktu lokal saat ini
+            const localDateTime = new Date(now.getTime() - (now.getTimezoneOffset() * 60000))
+                                    .toISOString()
+                                    .slice(0, 16);
+            
+            // 3. Atur nilai (value) DAN batas maksimal (max)
+            tglMasukInput.value = localDateTime;
+            tglMasukInput.max = localDateTime;
+            // --- AKHIR BAGIAN KUNCI ---
+
+            // Tampilkan kembali form yang mungkin tersembunyi saat mode edit
+            formPasien.querySelector('#kelas_pasien').closest('.form-group').style.display = 'block';
+            formPasien.querySelector('#no_tt').closest('.form-group').style.display = 'block';
+
+            // Logika untuk mengisi dropdown (tidak berubah)
             populateDropdown(selectKelas, [], 'Memuat kelas...');
             populateDropdown(selectTT, [], 'Pilih kelas terlebih dahulu');
             selectTT.disabled = true;
@@ -224,7 +241,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const response = await fetch('/api/ruangan/kelas-tersedia');
                 if (!response.ok) throw new Error('Gagal memuat kelas');
                 const kelasList = await response.json();
-                populateDropdown(selectKelas, kelasList, 'Pilih Kelas');
+                populateDropdown(selectKelas, kelasList, 'Pilih Kelas', 'id', 'nama_kelas');
             } catch (error) {
                 console.error(error);
                 populateDropdown(selectKelas, [], 'Gagal memuat');
@@ -511,38 +528,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     }
 
-// A. Saat Tombol "Tambah Pasien" Diklik
-    if (btnTambahPasien) {
-        btnTambahPasien.addEventListener('click', async () => {
-            formPasien.reset();
-            formPasien.removeAttribute('data-edit-id');
-            modalTambahPasien.querySelector('h2').textContent = 'Form Tambah Pasien Masuk';
-            
-            // Atur tanggal maksimal
-            const tglMasukInput = document.getElementById('tgl_masuk');
-            const now = new Date();
-            const maxDateTime = new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
-            tglMasukInput.max = maxDateTime;
 
-            populateDropdown(selectKelas, [], 'Memuat kelas...');
-            populateDropdown(selectTT, [], 'Pilih kelas terlebih dahulu');
-            selectTT.disabled = true;
-
-            openModal(modalTambahPasien);
-
-            // Ambil data kelas dari backend
-            try {
-                const response = await fetch('/api/ruangan/kelas-tersedia');
-                if (!response.ok) throw new Error('Gagal memuat kelas');
-                const kelasList = await response.json();
-                // Gunakan helper canggih untuk mengisi dropdown kelas
-                populateDropdown(selectKelas, kelasList, 'Pilih Kelas', 'id', 'nama_kelas');
-            } catch (error) {
-                console.error(error);
-                populateDropdown(selectKelas, [], 'Gagal memuat');
-            }
-        });
-    }
+    
 
     // B. Saat Kelas di Dropdown Dipilih
     if (selectKelas) {
@@ -564,7 +551,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!response.ok) throw new Error('Gagal memuat tempat tidur');
                 const ttList = await response.json();
                 
-                populateDropdown(selectTT, ttList, 'Pilih Tempat Tidur');
+                populateDropdown(selectTT, ttList, 'Pilih Tempat Tidur', 'id', 'nomor_tt');
                 selectTT.disabled = false;
                 
                 if(ttList.length === 0) {
@@ -630,7 +617,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                 String(pasien.no_rm).toLowerCase().includes(searchTerm);
 
             // Filter berdasarkan kelas
-            const matchesKelas = selectedKelas ? pasien.kelas === selectedKelas : true;
+            const namaKelasPasien = pasien.tempat_tidur?.kelas?.nama_kelas;
+            const matchesKelas = selectedKelas ? namaKelasPasien === selectedKelas : true;
 
             return matchesSearch && matchesKelas;
         });

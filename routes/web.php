@@ -23,6 +23,16 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/ruangan/tempat-tidur-tersedia', [PasienController::class, 'getTempatTidurTersedia']);
     Route::get('/api/ruangans', [AkunController::class, 'getRuanganForDropdown']);
 
+    // Rute API Pasien
+    Route::post('/pasien', [PasienController::class, 'store']);
+    Route::get('/pasien/aktif', [PasienController::class, 'getActivePatients']);
+    Route::get('/pasien/riwayat', [PasienController::class, 'getDischargedPatients']);
+    Route::get('/pasien/{pasien}', [PasienController::class, 'show']);
+    Route::put('/pasien/{pasien}', [PasienController::class, 'update']);
+    Route::delete('/pasien/{pasien}', [PasienController::class, 'destroy']);
+    Route::post('/pasien/{pasien}/keluar', [PasienController::class, 'discharge']);
+    Route::post('/pasien/{id}/batalkan-pulang', [PasienController::class, 'batalkanPulang']);
+
     // Rute API Data Master (Admin)
     Route::middleware('admin')->prefix('api/master')->name('api.master.')->group(function() {
     // Tambahkan 'index' untuk mengizinkan GET /api/master/gedungs

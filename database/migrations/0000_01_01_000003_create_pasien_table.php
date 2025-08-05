@@ -18,16 +18,15 @@ return new class extends Migration
             $table->enum('jenis_kelamin', ['L', 'P']);
             $table->dateTime('tgl_masuk');
             $table->enum('asal_pasien', ['igd', 'poli', 'pindahan']);
-            $table->foreignId('ruangan_id')->constrained('ruangans')->onDelete('cascade');
-            $table->foreignId('kelas_id')->constrained('kelas');
+
+            // Cukup simpan ID tempat tidurnya. Info ruangan & kelas bisa didapat dari sini.
             $table->foreignId('tempat_tidur_id')->constrained('tempat_tidurs');
-            $table->enum('status', ['aktif', 'keluar']);
+
+            $table->string('status')->default('aktif');
             $table->dateTime('tgl_keluar')->nullable();
-            $table->enum('keadaan_keluar', ['pulang', 'aps', 'pindah', 'dirujuk', 'meninggal'])->nullable();
+            $table->string('keadaan_keluar')->nullable();
             $table->integer('lama_dirawat')->nullable();
             $table->timestamps();
-
-            
         });
     }
 };

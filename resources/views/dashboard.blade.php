@@ -12,7 +12,7 @@
             <div class="header-info"><h1>Dashboard Ruangan: <span id="nama-ruangan">-</span></h1><P id="tanggal-hari-ini"></p></div>
             <div class="header-controls">
                 <button id="btn-tambah-pasien" class="header-action-btn"><i class="fas fa-plus-circle"></i> Tambah Pasien Masuk</button>
-                <a href="admin_akun.html" class="header-icon-btn" title="Panel Admin"><i class="fas fa-cogs" style="color: #e67e22;"></i></a>
+                <a href="{{ route('manajemen.ruangan.index') }}" class="header-icon-btn" title="Panel Admin"><i class="fas fa-cogs" style="color: #e67e22;"></i></a>
                 <div class="theme-switcher"><i class="fas fa-sun"></i><label class="switch"><input type="checkbox" id="theme-toggle"><span class="slider round"></span></label><i class="fas fa-moon"></i></div>
                 <div class="user-profile"><span id="display-user-name">Perawat Ana</span><button class="logout-btn" title="Logout"><i class="fas fa-sign-out-alt"></i></button></div>
             </div>
@@ -164,7 +164,7 @@
                     </div>
                     <div class="form-group">
                         <label for="kelas_pasien">Kelas Pasien</label>
-                        <select id="kelas_pasien" name="kelas" required>
+                        <select id="kelas_pasien" name="kelas_id" required>
                             <option value="">Pilih Kelas</option>
                             <option value="VVIP">VVIP</option>
                             <option value="VIP">VIP</option>
@@ -175,7 +175,7 @@
                     </div>
                     <div class="form-group">
                         <label for="no_tt">No. Tempat Tidur</label>
-                    <select id="no_tt" name="no_tt" required>
+                    <select id="no_tt" name="tempat_tidur_id" required>
                         <option value="">Pilih Tempat Tidur</option>
                         <option value="M-02">M-02</option>
                         <option value="M-05">M-05</option>
